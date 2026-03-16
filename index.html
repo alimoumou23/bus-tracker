@@ -449,10 +449,30 @@ body.light .depot-btn.active{color:var(--gray);}
       <div class="stat-box depose"><div class="stat-num" id="statDepose">0</div><div class="stat-lbl">DEPOSE</div></div>
       <div class="stat-box film"><div class="stat-num" id="statFilm">0</div><div class="stat-lbl">FILM</div></div>
     </div>
+
     <div class="card">
-      <div class="card-title">EXPORTER</div>
-      <button class="export-btn" onclick="exportCSV()"><span>📊</span> Exporter tableau Excel</button>
-      <button class="export-btn" onclick="exportTXT()"><span>📄</span> Exporter liste TXT</button>
+      <div class="card-title">FILTRER PAR DATE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label class="lbl">DATE DÉBUT</label>
+          <input type="date" id="dateFrom" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;" onchange="updateRapportStats()"/>
+        </div>
+        <div>
+          <label class="lbl">DATE FIN</label>
+          <input type="date" id="dateTo" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;" onchange="updateRapportStats()"/>
+        </div>
+      </div>
+      <div id="filteredStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+      <div id="filteredInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center;letter-spacing:1px;"></div>
+      <button class="export-btn" onclick="exportCSVFiltered()"><span>📊</span> Télécharger Excel (période)</button>
+      <button class="export-btn" onclick="exportPhotosFiltered()" style="border-color:var(--film);color:var(--film);" onmouseover="this.style.borderColor='var(--film)';this.style.color='var(--film)'"><span>📸</span> Télécharger photos (période)</button>
+      <button class="export-btn" onclick="deleteByDateRange()" style="border-color:#e53935;color:#e53935;" onmouseover="this.style.borderColor='#e53935';this.style.color='#e53935'"><span>🗑️</span> Supprimer enregistrements (période)</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">TOUT EXPORTER</div>
+      <button class="export-btn" onclick="exportCSV()"><span>📊</span> Exporter tout en Excel</button>
+      <button class="export-btn" onclick="exportTXT()"><span>📄</span> Exporter tout en TXT</button>
     </div>
   </div>
 
@@ -1020,6 +1040,115 @@ function renderStats(){
   document.getElementById('statPose').textContent=_records.filter(r=>r.action==='POSE').length;
   document.getElementById('statDepose').textContent=_records.filter(r=>r.action==='DEPOSE').length;
   document.getElementById('statFilm').textContent=_records.filter(r=>r.action==='FILM').length;
+  updateRapportStats();
+}
+
+function parseDate(str){
+  // str format: DD-MM-YYYY
+  if(!str) return null;
+  var p = str.split('-');
+  if(p.length===3) return new Date(p[2], p[1]-1, p[0]);
+  return null;
+}
+
+function parseDateInput(str){
+  // input type=date gives YYYY-MM-DD
+  if(!str) return null;
+  var p = str.split('-');
+  return new Date(p[0], p[1]-1, p[2]);
+}
+
+function getFilteredRecords(){
+  var from = parseDateInput(document.getElementById('dateFrom').value);
+  var to = parseDateInput(document.getElementById('dateTo').value);
+  return _records.filter(function(r){
+    var d = parseDate(r.date);
+    if(!d) return false;
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  });
+}
+
+function updateRapportStats(){
+  var records = getFilteredRecords();
+  var from = document.getElementById('dateFrom').value;
+  var to = document.getElementById('dateTo').value;
+  var info = document.getElementById('filteredInfo');
+  var statsDiv = document.getElementById('filteredStats');
+
+  if(!from && !to){
+    info.textContent = 'Sélectionnez une période pour filtrer';
+    statsDiv.innerHTML = '';
+    return;
+  }
+
+  var pose = records.filter(function(r){return r.action==='POSE';}).length;
+  var depose = records.filter(function(r){return r.action==='DEPOSE';}).length;
+  var film = records.filter(function(r){return r.action==='FILM';}).length;
+
+  statsDiv.innerHTML =
+    '<div class="stat-box pose" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+pose+'</div><div class="stat-lbl">POSE</div></div>' +
+    '<div class="stat-box depose" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+depose+'</div><div class="stat-lbl">DEPOSE</div></div>' +
+    '<div class="stat-box film" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+film+'</div><div class="stat-lbl">FILM</div></div>';
+
+  info.textContent = records.length + ' enregistrement(s) trouvé(s)';
+}
+
+function exportCSVFiltered(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune donnée pour cette période');
+  var h=['N_Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
+  var rows=records.map(function(r){return [r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time];});
+  var sep=';';
+  var csv='sep='+sep+'\n'+[h].concat(rows).map(function(r){
+    return r.map(function(v){return '"'+(v||'')+'"';}).join(sep);
+  }).join('\n');
+  var a=document.createElement('a');
+  var from=document.getElementById('dateFrom').value||'debut';
+  var to=document.getElementById('dateTo').value||'fin';
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='rapport_'+from+'_au_'+to+'.csv';
+  a.click();
+  showToast('✅ Excel téléchargé!');
+}
+
+function exportPhotosFiltered(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune photo pour cette période');
+  var count = 0;
+  records.forEach(function(r, i){
+    if(r.photoURL && r.photoURL.startsWith('data:')){
+      setTimeout(function(){
+        var a = document.createElement('a');
+        a.href = r.photoURL;
+        a.download = r.fileName || ('photo_'+r.bus+'_'+r.date+'.jpg');
+        a.click();
+      }, i * 300);
+      count++;
+    }
+  });
+  if(count===0){
+    showToast('❌ Photos non disponibles (pas en cache)');
+  } else {
+    showToast('📸 Téléchargement de '+count+' photo(s)...');
+  }
+}
+
+async function deleteByDateRange(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucun enregistrement pour cette période');
+  var from = document.getElementById('dateFrom').value;
+  var to = document.getElementById('dateTo').value;
+  if(!confirm('Supprimer '+records.length+' enregistrement(s) entre '+from+' et '+to+' ?')) return;
+  var count = 0;
+  for(var i=0; i<records.length; i++){
+    try {
+      await db.collection('records').doc(records[i].id).delete();
+      count++;
+    } catch(e){}
+  }
+  showToast('🗑️ '+count+' enregistrement(s) supprimé(s)');
 }
 function exportCSV(){
   if(!_records.length) return showToast('Aucune donnée');
