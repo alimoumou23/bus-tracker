@@ -416,7 +416,7 @@ input:focus{border-color:var(--yellow);}
         <button class="add-tag-btn" onclick="addItem('poseur')">+</button>
       </div>
     </div>
-    <div class="card">
+    <div class="card admin-only" id="codesCard">
       <div class="card-title">CODES POSEURS</div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">Chaque poseur a un code unique pour se connecter</div>
       <div id="codesList"></div>
@@ -447,36 +447,53 @@ async function doLogin(){
   const err = document.getElementById('loginErr');
   if(!code){ err.style.display='block'; err.textContent='❌ Entrez votre code'; return; }
 
-  // Load poseur codes from Firebase first
-  let poseurCodes = {};
-  try {
-    const cfgDoc = await db.collection('config').doc('main').get();
-    if(cfgDoc.exists && cfgDoc.data().poseurCodes){
-      poseurCodes = cfgDoc.data().poseurCodes;
-    }
-  } catch(e){}
-
-  // Check admin
+  // Check admin code first
   if(code === '12042024'){
     _currentUser = { name:'Admin', role:'admin' };
-  } else if(poseurCodes[code]){
-    _currentUser = { name:poseurCodes[code], role:'equipe' };
-  } else {
-    err.style.display='block';
-    err.textContent='❌ Code incorrect';
-    document.getElementById('loginPass').value='';
+    loginSuccess();
     return;
   }
 
+  // Check local poseur codes
+  if(_cfg.poseurCodes && _cfg.poseurCodes[code]){
+    _currentUser = { name:_cfg.poseurCodes[code], role:'equipe' };
+    loginSuccess();
+    return;
+  }
+
+  // Try Firebase codes (in case updated remotely)
+  try {
+    const cfgDoc = await db.collection('config').doc('main').get();
+    if(cfgDoc.exists){
+      const d = cfgDoc.data();
+      if(d.poseurCodes && d.poseurCodes[code]){
+        // Update local config
+        if(d.camps) _cfg.camps=d.camps;
+        if(d.depots) _cfg.depots=d.depots;
+        if(d.poseurs) _cfg.poseurs=d.poseurs;
+        if(d.poseurCodes) _cfg.poseurCodes=d.poseurCodes;
+        _currentUser = { name:_cfg.poseurCodes[code], role:'equipe' };
+        loginSuccess();
+        return;
+      }
+    }
+  } catch(e){}
+
+  // Wrong code
+  err.style.display='block';
+  err.textContent='❌ Code incorrect';
+  document.getElementById('loginPass').value='';
+}
+
+function loginSuccess(){
+  document.getElementById('loginErr').style.display='none';
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('userLabel').textContent='👤 '+_currentUser.name;
-
   if(_currentUser.role === 'equipe'){
     document.querySelectorAll('.admin-tab').forEach(t=>t.style.display='none');
+    document.querySelectorAll('.admin-only').forEach(t=>t.style.display='none');
   }
-
-  err.style.display='none';
   init();
 }
 
