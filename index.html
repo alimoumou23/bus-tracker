@@ -1511,23 +1511,58 @@ function setHistFilter(type,val,el){
   renderHistory();
 }
 function renderHistory(){
-  const poseurs=[...new Set(_records.filter(r=>r.date===_histFilter.date).map(r=>r.poseur).filter(Boolean))];
+  var isAdmin = _currentUser && _currentUser.role==='admin';
+  var isChef  = _currentUser && _currentUser.role==='chef';
+  var isEquipe= _currentUser && _currentUser.role==='equipe';
+
+  // Stats board: admin + chef only
+  var board = document.getElementById('statsBoard');
+  if(board){ board.style.display=(isAdmin||isChef)?'block':'none'; }
+  if(isAdmin||isChef) renderPoseurStats();
+
+  // Poseur filter buttons: admin + chef only
   const pf=document.getElementById('poseurFilters');
-  if(poseurs.length){
-    pf.innerHTML=['ALL',...poseurs].map(p=>`<button class="filter-btn${(p==='ALL'&&_histFilter.poseur==='ALL')||(p===_histFilter.poseur)?' active':''}" onclick="setHistFilter('poseur','${p}',this)">${p==='ALL'?'👥 TOUS':p}</button>`).join('');
-  } else { pf.innerHTML=''; }
+  if(isAdmin||isChef){
+    const poseurs=[...new Set(_records.filter(r=>r.date===_histFilter.date).map(r=>r.poseur).filter(Boolean))];
+    pf.innerHTML=poseurs.length ? ['ALL',...poseurs].map(p=>`<button class="filter-btn${(p==='ALL'&&_histFilter.poseur==='ALL')||(p===_histFilter.poseur)?' active':''}" onclick="setHistFilter('poseur','${p}',this)">${p==='ALL'?'👥 TOUS':p}</button>`).join('') : '';
+  } else {
+    pf.innerHTML='';
+  }
+
+  // Base records for this date
   let records=_records.filter(r=>r.date===_histFilter.date);
+
+  // Equipe: see ONLY their own records
+  if(isEquipe){
+    records=records.filter(r=>r.poseur===_currentUser.name);
+  }
+
+  // Action filter
   if(_histFilter.action!=='ALL') records=records.filter(r=>r.action===_histFilter.action);
-  if(_histFilter.poseur!=='ALL') records=records.filter(r=>r.poseur===_histFilter.poseur);
+
+  // Poseur filter (admin/chef only)
+  if((isAdmin||isChef) && _histFilter.poseur!=='ALL') records=records.filter(r=>r.poseur===_histFilter.poseur);
+
+  // Bus number filter
+  var busInput = document.getElementById('busSearchInput');
+  var busVal = busInput ? busInput.value.trim() : '';
+  if(busVal) records=records.filter(r=>(r.bus||'').toString().includes(busVal));
+
+  // Summary
   const sm=document.getElementById('histSummary');
   sm.textContent=records.length?`${records.length} photo(s) · POSE:${records.filter(r=>r.action==='POSE').length} DEPOSE:${records.filter(r=>r.action==='DEPOSE').length} FILM:${records.filter(r=>r.action==='FILM').length}`:'';
+
   const list=document.getElementById('histList');
   if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO CE JOUR</div></div>`; return; }
-  var canEdit = _currentUser && (_currentUser.role==='admin' || _currentUser.role==='chef');
-  var isAdmin = _currentUser && _currentUser.role==='admin';
-  list.innerHTML=records.map(r=>`
-    <div class="hist-item" id="hitem-${r.id}">
-      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="${r.driveUrl?'cursor:pointer':''}" onclick="${r.driveUrl?`window.open('${r.driveUrl}','_blank')`:''}" />
+
+  var isAdmin2 = isAdmin; // for template
+  list.innerHTML=records.map(r=>{
+    var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
+    var hasPhoto = driveLink || (r.photoURL && r.photoURL.startsWith('data:'));
+    var canEdit = true; // all roles can edit
+    return `
+    <div class="hist-item">
+      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="cursor:${driveLink?'pointer':'default'}" onclick="${driveLink?`window.open('${driveLink}','_blank')`:''}"/>
       <div class="hist-info">
         <div class="hist-top">
           <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
@@ -1535,17 +1570,19 @@ function renderHistory(){
           <span style="font-size:10px;color:var(--muted);margin-left:4px;">${r.time||''}</span>
         </div>
         <div class="hist-fname">${r.campagne||''}${r.depot?' · '+r.depot:''}</div>
-        <div class="hist-meta" style="color:#FDDD00;font-weight:600;">👷 ${r.poseur||'—'}</div>
-        <div class="hist-meta" style="font-size:10px;color:${r.driveUrl?'#4caf50':'#888'};">${r.driveUrl?'📸 Sur Drive':'📷 Local'}</div>
+        ${(isAdmin||isChef) ? `<div class="hist-meta" style="color:#FDDD00;font-weight:600;">👷 ${r.poseur||'—'}</div>` : ''}
+        <div class="hist-meta" style="font-size:10px;color:${hasPhoto?'#4caf50':'#e53935'};">${hasPhoto?'📸 Photo disponible':'📷 Pas de photo'}</div>
       </div>
       <div class="hist-actions">
-        ${r.driveUrl ? `<button class="hist-dl" title="Voir Drive" onclick="window.open('${r.driveUrl}','_blank')" style="color:#4285f4;">🔗</button>` : ''}
-        <button class="hist-dl" onclick="downloadPhoto('${r.photoURL||''}','${r.fileName||''}','${r.driveUrl||''}')">⬇️</button>
-        ${canEdit ? `<button class="hist-dl" style="color:var(--yellow);" onclick="openQuickEdit('${r.id}')">✏️</button>` : ''}
+        ${driveLink ? `<button class="hist-dl" title="Drive" onclick="window.open('${driveLink}','_blank')" style="color:#4285f4;">🔗</button>` : ''}
+        ${hasPhoto ? `<button class="hist-dl" title="Télécharger" onclick="downloadPhoto('${r.photoURL||''}','${r.fileName||''}','${driveLink||''}')">⬇️</button>` : ''}
+        <button class="hist-dl" style="color:var(--yellow);" onclick="openEditModal('${r.id}')">✏️</button>
         ${isAdmin ? `<button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>` : ''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
 function downloadPhoto(url,name,driveUrl){
   var target = driveUrl || url;
   if(!target || target === 'undefined') { showToast('❌ Photo non disponible'); return; }
