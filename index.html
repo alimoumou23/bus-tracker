@@ -1007,21 +1007,29 @@ function busLookup(){
     html += '<span style="font-size:11px;color:var(--muted);">'+r.time+'</span>';
     html += '</div>';
 
-    // Info
-    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📅 '+r.date+' · '+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
-    html += '<div style="font-size:13px;font-weight:600;color:#FDDD00;margin-bottom:8px;">👷 '+(r.poseur||'—')+'</div>';
-
-    // Photo - show thumbnail if available, always show Drive link
+    // Side by side: photo | info
     var thumbSrc = hasThumb ? r.photoURL : '';
-    html += '<div style="display:flex;gap:8px;align-items:center;">';
+    html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
+
+    // Left: photo
+    html += '<div style="flex-shrink:0;">';
     if(thumbSrc){
-      html += '<img src="'+thumbSrc+'" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);" onclick="window.open(\''+( driveLink||thumbSrc)+'\',\'_blank\')"/>';
+      html += '<img src="'+thumbSrc+'" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block;" />';
+    } else {
+      html += '<div style="width:72px;height:72px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;">📷</div>';
     }
+    html += '</div>';
+
+    // Right: info
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-size:13px;font-weight:700;color:#FDDD00;margin-bottom:4px;">👷 '+(r.poseur||'—')+'</div>';
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">📅 '+r.date+' · '+r.time+'</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
     if(driveLink){
-      html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:8px;color:#4285f4;font-size:12px;font-weight:600;text-decoration:none;">🔗 Voir photo</a>';
-    } else if(!thumbSrc){
-      html += '<span style="font-size:11px;color:#555;">📷 Pas de photo</span>';
+      html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:6px;color:#4285f4;font-size:11px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
     }
+    html += '</div>';
+
     html += '</div>';
 
     html += '</div></div>';
