@@ -286,15 +286,11 @@ input:focus{border-color:var(--yellow);}
   </div>
   <div class="login-box">
     <div class="login-title">ACCÈS SÉCURISÉ</div>
-    <div class="login-sub">GESTION AFFICHAGE PUBLICITAIRE</div>
-    <div class="role-btns">
-      <button class="role-btn active" id="roleEquipe" onclick="setRole('equipe')">👷 ÉQUIPE</button>
-      <button class="role-btn" id="roleAdmin" onclick="setRole('admin')">🔐 ADMIN</button>
-    </div>
-    <label class="login-lbl">MOT DE PASSE</label>
-    <input type="password" class="login-input" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div class="login-sub">ENTREZ VOTRE CODE PERSONNEL</div>
+    <label class="login-lbl">CODE</label>
+    <input type="password" class="login-input" id="loginPass" placeholder="••••" inputmode="numeric" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" onclick="doLogin()">→ CONNEXION</button>
-    <div class="login-err" id="loginErr">❌ Mot de passe incorrect</div>
+    <div class="login-err" id="loginErr">❌ Code incorrect</div>
   </div>
 </div>
 
@@ -306,6 +302,7 @@ input:focus{border-color:var(--yellow);}
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="sync-dot" id="syncDot" style="opacity:0"></div>
+      <div style="font-size:10px;color:var(--gray);letter-spacing:1px;font-weight:bold;" id="userLabel"></div>
       <div class="header-count" id="totalCount">0 photos</div>
     </div>
   </div>
@@ -327,7 +324,7 @@ input:focus{border-color:var(--yellow);}
       </div>
       <div class="field"><label class="lbl">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
       <div class="field"><label class="lbl">DÉPÔT</label><div class="sd-wrap" id="sd-depot"></div></div>
-      <div class="field"><label class="lbl">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
+      <div class="field" id="poseurField"><label class="lbl">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
     </div>
     <div class="card">
       <div class="card-title">ACTION</div>
@@ -419,6 +416,16 @@ input:focus{border-color:var(--yellow);}
         <button class="add-tag-btn" onclick="addItem('poseur')">+</button>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">CODES POSEURS</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">Chaque poseur a un code unique pour se connecter</div>
+      <div id="codesList"></div>
+      <div class="add-tag-row" style="margin-top:12px;">
+        <input type="text" id="newCodeName" placeholder="Nom poseur"/>
+        <input type="text" id="newCodeVal" placeholder="Code" style="max-width:90px;text-align:center;" maxlength="8"/>
+        <button class="add-tag-btn" onclick="addPoseurCode()">+</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -426,30 +433,51 @@ input:focus{border-color:var(--yellow);}
 
 <script>
 // ══ LOGIN ══
-const PASSWORDS = { equipe:'casv2024', admin:'admin2024' };
-let _role = 'equipe';
+// Codes: { code: { name, role } }
+// role: 'equipe' or 'admin'
+// Admin code: 0000
+const USERS = {
+  '0000': { name:'Admin', role:'admin' }
+  // Poseurs are loaded from Firebase config
+};
+let _currentUser = null;
 
-function setRole(r){
-  _role = r;
-  document.getElementById('roleEquipe').classList.toggle('active', r==='equipe');
-  document.getElementById('roleAdmin').classList.toggle('active', r==='admin');
-}
-
-function doLogin(){
-  const pass = document.getElementById('loginPass').value;
+async function doLogin(){
+  const code = document.getElementById('loginPass').value.trim();
   const err = document.getElementById('loginErr');
-  if(pass === PASSWORDS[_role]){
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    if(_role === 'equipe'){
-      document.querySelectorAll('.admin-tab').forEach(t=>t.style.display='none');
+  if(!code){ err.style.display='block'; err.textContent='❌ Entrez votre code'; return; }
+
+  // Load poseur codes from Firebase first
+  let poseurCodes = {};
+  try {
+    const cfgDoc = await db.collection('config').doc('main').get();
+    if(cfgDoc.exists && cfgDoc.data().poseurCodes){
+      poseurCodes = cfgDoc.data().poseurCodes;
     }
-    err.style.display = 'none';
-    init();
+  } catch(e){}
+
+  // Check admin
+  if(code === '0000'){
+    _currentUser = { name:'Admin', role:'admin' };
+  } else if(poseurCodes[code]){
+    _currentUser = { name:poseurCodes[code], role:'equipe' };
   } else {
-    err.style.display = 'block';
-    document.getElementById('loginPass').value = '';
+    err.style.display='block';
+    err.textContent='❌ Code incorrect';
+    document.getElementById('loginPass').value='';
+    return;
   }
+
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('userLabel').textContent='👤 '+_currentUser.name;
+
+  if(_currentUser.role === 'equipe'){
+    document.querySelectorAll('.admin-tab').forEach(t=>t.style.display='none');
+  }
+
+  err.style.display='none';
+  init();
 }
 
 // ══ FIREBASE ══
@@ -482,6 +510,11 @@ async function init(){
     const cfgDoc = await db.collection('config').doc('main').get();
     if(cfgDoc.exists){ const d=cfgDoc.data(); if(d.camps)_cfg.camps=d.camps; if(d.depots)_cfg.depots=d.depots; if(d.poseurs)_cfg.poseurs=d.poseurs; }
   } catch(e){}
+  // Auto-set poseur from login
+  if(_currentUser && _currentUser.role==='equipe'){
+    _sdValues.poseur = _currentUser.name;
+    document.getElementById('poseurField').style.display='none';
+  }
   buildAllDropdowns();
   db.collection('records').orderBy('timestamp','desc').onSnapshot(snap=>{
     _records=[];
@@ -730,6 +763,44 @@ function renderSettings(){
   renderTags('camp','campList',_cfg.camps);
   renderTags('depot','depotList',_cfg.depots);
   renderTags('poseur','poseurList',_cfg.poseurs);
+  renderCodes();
+}
+
+function renderCodes(){
+  if(!_cfg.poseurCodes) _cfg.poseurCodes={};
+  const div=document.getElementById('codesList');
+  const entries=Object.entries(_cfg.poseurCodes);
+  if(!entries.length){ div.innerHTML='<span style="font-size:11px;color:var(--muted)">Aucun code — code admin: 0000</span>'; return; }
+  div.innerHTML=entries.map(([code,name])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <span style="color:var(--text);font-size:13px;">${name}</span>
+        <span style="color:var(--yellow);font-size:12px;margin-left:12px;letter-spacing:2px;">CODE: ${code}</span>
+      </div>
+      <span style="cursor:pointer;color:var(--muted);font-size:16px;" onclick="removePoseurCode('${code}')">×</span>
+    </div>`).join('')+'<div style="font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:1px;">Code admin: 0000</div>';
+}
+
+async function addPoseurCode(){
+  const name=document.getElementById('newCodeName').value.trim();
+  const code=document.getElementById('newCodeVal').value.trim();
+  if(!name||!code) return showToast('Nom et code requis');
+  if(!_cfg.poseurCodes) _cfg.poseurCodes={};
+  _cfg.poseurCodes[code]=name;
+  // Also add to poseurs list if not there
+  if(!_cfg.poseurs.includes(name)) _cfg.poseurs.push(name);
+  await saveConfig();
+  renderSettings();
+  document.getElementById('newCodeName').value='';
+  document.getElementById('newCodeVal').value='';
+  showToast('✅ Code ajouté');
+}
+
+async function removePoseurCode(code){
+  if(!confirm('Supprimer ce code ?')) return;
+  delete _cfg.poseurCodes[code];
+  await saveConfig();
+  renderSettings();
 }
 function renderTags(type,lid,items){
   document.getElementById(lid).innerHTML=items.length?items.map((item,i)=>`<div class="tag"><span>${item}</span><span class="tag-del" onclick="removeItem('${type}',${i})">×</span></div>`).join(''):'<span style="font-size:11px;color:var(--muted)">Aucun élément</span>';
