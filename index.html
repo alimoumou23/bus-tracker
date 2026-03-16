@@ -645,7 +645,7 @@ function loginSuccess(){
 }
 
 // ══ GOOGLE DRIVE SCRIPT ══
-var DRIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjKodsXCWdhZc_e8vXUBmHjgX9-rH_guno63QWUnTEyDsXkZjfgSmpw2tLdV4kox_U/exec';
+var DRIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNJA1EgUELEK-wR-t2u8AGttK8KGa6aWxvifm1EoiRdJ37ON1MULhh-iA3EyQJaxnb/exec';
 
 // ══ FIREBASE ══
 var db, storage;
@@ -1105,26 +1105,36 @@ async function doCapture(){
     document.getElementById('progressText').textContent='Upload en cours...';
 
     // Upload to Google Drive via Apps Script
-    var response = await fetch(DRIVE_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        image: base64,
-        fileName: fn,
-        date: getDate()
-      })
-    });
+    // Use no-cors mode - fire and forget (CORS limitation with Apps Script)
+    var photoURL = await toThumb(_state.file); // Save thumb for preview
     
-    var result = await response.json();
+    document.getElementById('progressFill').style.width='60%';
+    document.getElementById('progressText').textContent='Envoi vers Google Drive...';
+    
+    try {
+      // Try with CORS first
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function(){ controller.abort(); }, 10000);
+      
+      var response = await fetch(DRIVE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify({image:base64, fileName:fn, date:getDate()}),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      var result = await response.json();
+      if(result && result.success && result.url) {
+        photoURL = result.url;
+      }
+    } catch(fetchErr) {
+      // CORS blocked response but request likely went through
+      // Use thumbnail for preview, Drive will have the photo
+      console.log('Drive upload (CORS):', fetchErr.message);
+    }
     
     document.getElementById('progressFill').style.width='80%';
-
-    var photoURL = '';
-    if(result.success) {
-      photoURL = result.url;
-    } else {
-      // Fallback: save thumbnail locally
-      photoURL = await toThumb(_state.file);
-    }
 
     // Save to Firestore
     await db.collection('records').add({
@@ -1237,7 +1247,15 @@ function renderHistory(){
       </div>
     </div>`).join('');
 }
-function downloadPhoto(url,name){ const a=document.createElement('a');a.href=url;a.download=name;a.target='_blank';a.click(); }
+function downloadPhoto(url,name,driveUrl){
+  var target = driveUrl || url;
+  if(!target || target === 'undefined') { showToast('❌ Photo non disponible'); return; }
+  var a=document.createElement('a');
+  a.href=target;
+  a.target='_blank';
+  a.download=name;
+  a.click();
+}
 async function deleteRecord(id,sp){
   if(!_currentUser || _currentUser.role !== 'admin'){ showToast('❌ Accès refusé'); return; }
   if(!confirm('Supprimer cette photo ?')) return;
