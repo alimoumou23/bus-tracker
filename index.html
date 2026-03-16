@@ -1202,12 +1202,13 @@ function renderHistory(){
       </div>
       <div class="hist-actions">
         <button class="hist-dl" onclick="downloadPhoto('${r.photoURL}','${r.fileName}')">⬇️</button>
-        <button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>
+        ${_currentUser&&_currentUser.role==='admin' ? `<button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>` : ''}
       </div>
     </div>`).join('');
 }
 function downloadPhoto(url,name){ const a=document.createElement('a');a.href=url;a.download=name;a.target='_blank';a.click(); }
 async function deleteRecord(id,sp){
+  if(!_currentUser || _currentUser.role !== 'admin'){ showToast('❌ Accès refusé'); return; }
   if(!confirm('Supprimer cette photo ?')) return;
   try{ await db.collection('records').doc(id).delete(); if(sp){ try{ await storage.ref(sp).delete(); }catch(e){} } showToast('🗑️ Supprimé'); }catch(e){ showToast('❌ Erreur'); }
 }
