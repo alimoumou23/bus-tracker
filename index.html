@@ -454,25 +454,32 @@ async function doLogin(){
     return;
   }
 
-  // Check local poseur codes
-  if(_cfg.poseurCodes && _cfg.poseurCodes[code]){
-    _currentUser = { name:_cfg.poseurCodes[code], role:'equipe' };
+  // Check local poseur codes (always works offline too)
+  var localCodes = {
+    '1001':'Yassin','1002':'Hamza','1003':'Othmane','1004':'Chouaib',
+    '1005':'Azize','1006':'Rachid','1007':'Adil','1008':'Hamid','1009':'Azlag'
+  };
+
+  // Merge with any Firebase-updated codes
+  var allCodes = Object.assign({}, localCodes, (_cfg && _cfg.poseurCodes ? _cfg.poseurCodes : {}));
+
+  if(allCodes[code]){
+    _currentUser = { name:allCodes[code], role:'equipe' };
     loginSuccess();
     return;
   }
 
-  // Try Firebase codes (in case updated remotely)
+  // Try Firebase codes (in case new poseurs added remotely)
   try {
     const cfgDoc = await db.collection('config').doc('main').get();
     if(cfgDoc.exists){
       const d = cfgDoc.data();
       if(d.poseurCodes && d.poseurCodes[code]){
-        // Update local config
         if(d.camps) _cfg.camps=d.camps;
         if(d.depots) _cfg.depots=d.depots;
         if(d.poseurs) _cfg.poseurs=d.poseurs;
-        if(d.poseurCodes) _cfg.poseurCodes=d.poseurCodes;
-        _currentUser = { name:_cfg.poseurCodes[code], role:'equipe' };
+        _cfg.poseurCodes = Object.assign({}, localCodes, d.poseurCodes);
+        _currentUser = { name:d.poseurCodes[code], role:'equipe' };
         loginSuccess();
         return;
       }
