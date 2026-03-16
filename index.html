@@ -437,7 +437,7 @@ input:focus{border-color:var(--yellow);}
 // role: 'equipe' or 'admin'
 // Admin code: 0000
 const USERS = {
-  '0000': { name:'Admin', role:'admin' }
+  '12042024': { name:'Admin', role:'admin' }
   // Poseurs are loaded from Firebase config
 };
 let _currentUser = null;
@@ -457,7 +457,7 @@ async function doLogin(){
   } catch(e){}
 
   // Check admin
-  if(code === '0000'){
+  if(code === '12042024'){
     _currentUser = { name:'Admin', role:'admin' };
   } else if(poseurCodes[code]){
     _currentUser = { name:poseurCodes[code], role:'equipe' };
@@ -791,7 +791,7 @@ function renderCodes(){
   if(!_cfg.poseurCodes) _cfg.poseurCodes={};
   const div=document.getElementById('codesList');
   const entries=Object.entries(_cfg.poseurCodes);
-  if(!entries.length){ div.innerHTML='<span style="font-size:11px;color:var(--muted)">Aucun code — code admin: 0000</span>'; return; }
+  if(!entries.length){ div.innerHTML='<span style="font-size:11px;color:var(--muted)">Aucun code — code admin: 12042024</span>'; return; }
   div.innerHTML=entries.map(([code,name])=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
       <div>
