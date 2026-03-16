@@ -177,19 +177,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div class="field">
       <label class="lbl">CAMPAGNE</label>
-      <select id="campagne" onchange="updatePreview()">
+      <select id="campagne" onchange="handleSelectNew('campagne');updatePreview()">
         <option value="">— Sélectionner —</option>
       </select>
     </div>
     <div class="field">
       <label class="lbl">DÉPÔT</label>
-      <select id="depot" onchange="updatePreview()">
+      <select id="depot" onchange="handleSelectNew('depot');updatePreview()">
         <option value="">— Sélectionner —</option>
       </select>
     </div>
     <div class="field">
       <label class="lbl">POSEUR</label>
-      <select id="poseur" onchange="updatePreview()">
+      <select id="poseur" onchange="handleSelectNew('poseur');updatePreview()">
         <option value="">— Sélectionner —</option>
       </select>
     </div>
@@ -606,10 +606,31 @@ function refreshSelects() {
     const cur = sel.value;
     sel.innerHTML = '<option value="">— Sélectionner —</option>';
     items.forEach(i => { const o = document.createElement('option'); o.value=i; o.textContent=i; if(i===cur) o.selected=true; sel.appendChild(o); });
+    sel.innerHTML += '<option value="__new__">➕ Ajouter nouveau...</option>';
   };
   fillSelect('campagne', db.camps);
   fillSelect('depot', db.depots);
   fillSelect('poseur', db.poseurs);
+}
+
+function handleSelectNew(id) {
+  const sel = document.getElementById(id);
+  if (sel.value !== '__new__') return;
+  const labelMap = { campagne: 'Campagne', depot: 'Dépôt', poseur: 'Poseur' };
+  const arrMap = { campagne: 'camps', depot: 'depots', poseur: 'poseurs' };
+  const val = prompt('Ajouter ' + labelMap[id] + ':');
+  if (val && val.trim()) {
+    const v = val.trim();
+    if (!db[arrMap[id]].includes(v)) {
+      db[arrMap[id]].push(v);
+      save();
+      refreshSelects();
+    }
+    document.getElementById(id).value = v;
+  } else {
+    sel.value = '';
+  }
+  updatePreview();
 }
 
 function updateHeaderCount() {
