@@ -1004,11 +1004,14 @@ function busLookup(){
     var ac = r.action==='POSE'?'var(--pose)':r.action==='DEPOSE'?'var(--depose)':'var(--film)';
     var icon = r.action==='POSE'?'🖼️':r.action==='DEPOSE'?'🗑️':'🛡️';
     var isLast = i === 0; // First in sorted array = most recent
-    var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
+    // Only use driveUrl if it's a real file link (not folder)
+    var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
+    // If no file link, check if photoURL is a drive file link
+    if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
     // Determine best thumbnail source
     var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
     // Also accept direct drive file thumbnail (not folder)
-    var isDriveFile = r.driveUrl && r.driveUrl.includes('/file/d/');
+    var isDriveFile = driveLink && driveLink.includes('/file/d/');
     var hasThumb = hasBase64 || isDriveFile;
     var thumbSrc = hasBase64 ? r.photoURL : '';
     // Override thumbSrc with Drive thumbnail if we have fileId
@@ -1028,7 +1031,6 @@ function busLookup(){
     // Action header
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
-    html += '<span style="font-size:20px;">'+icon+'</span>';
     html += '<span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;color:'+ac+';">'+r.action+'</span>';
     if(isLast) html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:'+ac+'22;color:'+ac+';font-weight:700;">DERNIÈRE</span>';
     html += '</div>';
@@ -1977,7 +1979,10 @@ function renderHistory(){
 
   var isAdmin2 = isAdmin; // for template
   list.innerHTML=records.map(r=>{
-    var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
+    // Only use driveUrl if it's a real file link (not folder)
+    var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
+    // If no file link, check if photoURL is a drive file link
+    if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
     var hasPhoto = driveLink || (r.photoURL && r.photoURL.startsWith('data:'));
     var canEdit = true; // all roles can edit
     return `
