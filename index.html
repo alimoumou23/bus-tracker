@@ -1770,18 +1770,30 @@ async function doCapture(){
     try {
       document.getElementById('progressText').textContent='Envoi Drive...';
       
-      // Use no-cors: browser blocks reading response but request DOES go through
-      // Photo will be saved in Drive even without confirmation
-      await fetch(DRIVE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify({image:base64, fileName:fn, date:getDate()})
-      });
+      // Send to Drive - use text/plain to avoid CORS preflight
+      var controller = new AbortController();
+      var tid = setTimeout(function(){ controller.abort(); }, 20000);
       
-      // Store Drive folder as reference (CORS blocks individual file URL)
-      driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
-      // Keep local thumbnail as photoURL for preview in app
+      var resp = await fetch(DRIVE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify({image:base64, fileName:fn, date:getDate()}),
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      
+      var txt = await resp.text();
+      var result = null;
+      try { result = JSON.parse(txt); } catch(e){}
+      
+      if(result && result.success && result.fileId){
+        // Use Google Drive thumbnail URL - works without auth for shared files
+        photoURL = 'https://drive.google.com/thumbnail?id='+result.fileId+'&sz=w200';
+        driveUrl = 'https://drive.google.com/file/d/'+result.fileId+'/view';
+      } else {
+        // Fallback: folder link
+        driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
+      }
       
     } catch(fetchErr) {
       console.log('Drive upload error:', fetchErr.message);
