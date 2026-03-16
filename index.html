@@ -644,6 +644,9 @@ function loginSuccess(){
   init();
 }
 
+// ══ GOOGLE DRIVE SCRIPT ══
+var DRIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyThMQzrA3aSNPCkDiSzlobww8ghXK3jNR6joiudi7p84Eekx1Y6RLMnTmfH6HJpujn/exec';
+
 // ══ FIREBASE ══
 var db, storage;
 try {
@@ -1089,39 +1092,67 @@ function updatePreview(){
 async function doCapture(){
   const fn=buildFileName(); if(!fn) return;
   const btn=document.getElementById('dlBtn');
-  btn.disabled=true; btn.textContent='⏳ Enregistrement...';
+  btn.disabled=true; btn.textContent='⏳ Envoi...';
   document.getElementById('progressWrap').style.display='block';
-  document.getElementById('progressFill').style.width='60%';
-  document.getElementById('progressText').textContent='Enregistrement...';
+  document.getElementById('progressFill').style.width='20%';
+  document.getElementById('progressText').textContent='Envoi vers Google Drive...';
 
   try {
-    // 1. Download photo locally with correct name
-    const a=document.createElement('a');
-    a.href=_state.fileURL;
-    a.download=fn;
-    a.click();
+    // Convert to base64
+    var base64 = await toBase64(_state.file);
+    
+    document.getElementById('progressFill').style.width='50%';
+    document.getElementById('progressText').textContent='Upload en cours...';
 
-    // 2. Convert image to base64 thumbnail for preview
-    var thumb = await toThumb(_state.file);
+    // Upload to Google Drive via Apps Script
+    var response = await fetch(DRIVE_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        image: base64,
+        fileName: fn,
+        date: getDate()
+      })
+    });
+    
+    var result = await response.json();
+    
+    document.getElementById('progressFill').style.width='80%';
 
-    // 3. Save record to Firestore (no Storage needed)
+    var photoURL = '';
+    if(result.success) {
+      photoURL = result.url;
+    } else {
+      // Fallback: save thumbnail locally
+      photoURL = await toThumb(_state.file);
+    }
+
+    // Save to Firestore
     await db.collection('records').add({
       bus:pad(document.getElementById('busNum').value.trim()),
       action:_state.action,campagne:_sdValues.campagne,
       depot:_sdValues.depot,poseur:_sdValues.poseur,
-      fileName:fn,photoURL:thumb,storagePath:'',
+      fileName:fn,photoURL:photoURL,storagePath:'',
+      driveUrl: result.success ? result.url : '',
       date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
     });
 
     document.getElementById('progressFill').style.width='100%';
     document.getElementById('progressWrap').style.display='none';
-    showToast('✅ Photo sauvegardée !');
+    showToast(result.success ? '✅ Photo sur Google Drive!' : '✅ Photo sauvegardée!');
     resetCapture();
   } catch(e){
     showToast('❌ Erreur: '+e.message);
-    btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO';
+    btn.disabled=false; btn.textContent='📥 ENREGISTRER LA PHOTO';
     document.getElementById('progressWrap').style.display='none';
   }
+}
+
+function toBase64(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(e){ resolve(e.target.result); };
+    reader.readAsDataURL(file);
+  });
 }
 
 function toThumb(file){
