@@ -1030,15 +1030,9 @@ function busLookup(){
     html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
 
     // Left: photo - use Drive thumbnail if we have fileId
-    var fileId = null;
-    if(r.driveUrl){
-      var m = r.driveUrl.match(/[?&]id=([^&]+)/);
-      if(!m) m = r.driveUrl.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
-      fileId = m ? m[1] : null;
-    }
-    var driveThumbnail = fileId ? 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w200' : '';
-    var displaySrc = driveThumbnail || thumbSrc;
-    var fullViewUrl = driveLink || (thumbSrc ? thumbSrc : '');
+    // Use base64 thumbnail stored in Firestore for display
+    var displaySrc = thumbSrc; // base64 from Firestore
+    var fullViewUrl = driveLink || thumbSrc || '';
 
     html += '<div style="flex-shrink:0;">';
     if(displaySrc){
@@ -1828,11 +1822,11 @@ async function doCapture(){
       try { result = JSON.parse(txt); } catch(e){}
       
       if(result && result.success && result.fileId){
-        // Use Google Drive thumbnail URL - works without auth for shared files
-        photoURL = 'https://drive.google.com/thumbnail?id='+result.fileId+'&sz=w200';
+        // Keep base64 thumbnail as photoURL (for display in app)
+        // Save Drive file URL separately for opening full photo
         driveUrl = 'https://drive.google.com/file/d/'+result.fileId+'/view';
+        // photoURL stays as base64 thumbnail ✅
       } else {
-        // Fallback: folder link
         driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
       }
       
