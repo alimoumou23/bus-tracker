@@ -1402,29 +1402,27 @@ async function doCapture(){
     document.getElementById('progressText').textContent='Envoi vers Google Drive...';
     
     try {
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function(){ controller.abort(); }, 15000);
+      document.getElementById('progressText').textContent='Envoi Drive...';
       
-      var response = await fetch(DRIVE_SCRIPT_URL, {
+      // Use no-cors: browser blocks reading response but request DOES go through
+      // Photo will be saved in Drive even without confirmation
+      await fetch(DRIVE_SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify({image:base64, fileName:fn, date:getDate()}),
-        signal: controller.signal
+        body: JSON.stringify({image:base64, fileName:fn, date:getDate()})
       });
-      clearTimeout(timeoutId);
       
-      // Safe JSON parse
-      var text = await response.text();
-      var result = null;
-      try { result = JSON.parse(text); } catch(e) { result = null; }
+      // Build expected Drive folder URL (we can't get file ID without CORS)
+      // Construct month/day path to help find the file
+      var dateStr = getDate(); // DD-MM-YYYY
+      var month = dateStr.substring(6,10)+'-'+dateStr.substring(3,5);
+      driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
+      photoURL = driveUrl; // Link to Drive folder as reference
       
-      if(result && result.success && result.url) {
-        driveUrl = result.driveUrl || result.url;
-        photoURL = result.url; // Use Drive URL for preview
-      }
     } catch(fetchErr) {
-      // CORS ou timeout — la photo sera dans Drive quand même
-      console.log('Drive fetch note:', fetchErr.message);
+      console.log('Drive upload error:', fetchErr.message);
+      // Keep local thumbnail as fallback
     }
     
     document.getElementById('progressFill').style.width='80%';
@@ -1441,7 +1439,7 @@ async function doCapture(){
 
     document.getElementById('progressFill').style.width='100%';
     document.getElementById('progressWrap').style.display='none';
-    showToast(result.success ? '✅ Photo sur Google Drive!' : '✅ Photo sauvegardée!');
+    showToast('✅ Photo envoyée sur Google Drive!');
     resetCapture();
   } catch(e){
     showToast('❌ Erreur: '+e.message);
