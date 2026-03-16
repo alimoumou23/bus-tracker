@@ -938,6 +938,24 @@ function renderDashboard(){
 }
 
 
+
+// ══ PHOTO VIEWER ══
+function openPhotoViewer(src, fullUrl){
+  var viewer = document.getElementById('photoViewer');
+  var img = document.getElementById('photoViewerImg');
+  var link = document.getElementById('photoViewerLink');
+  if(!viewer) return;
+  img.src = fullUrl || src;
+  link.href = fullUrl || src;
+  viewer.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePhotoViewer(){
+  document.getElementById('photoViewer').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 // ══ BUS LOOKUP ══
 function busLookup(){
   var busNum = document.getElementById('busLookupInput').value.trim();
@@ -1011,12 +1029,22 @@ function busLookup(){
     var thumbSrc = hasThumb ? r.photoURL : '';
     html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
 
-    // Left: photo
+    // Left: photo - use Drive thumbnail if we have fileId
+    var fileId = r.driveUrl ? r.driveUrl.match(/\/d\/([^/]+)\//) : null;
+    fileId = fileId ? fileId[1] : null;
+    var driveThumbnail = fileId ? 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w200' : '';
+    var displaySrc = driveThumbnail || thumbSrc;
+    var fullViewUrl = driveLink || (thumbSrc ? thumbSrc : '');
+
     html += '<div style="flex-shrink:0;">';
-    if(thumbSrc){
-      html += '<img src="'+thumbSrc+'" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block;" />';
+    if(displaySrc){
+      html += '<img src="'+displaySrc+'" '+
+        'style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);display:block;cursor:pointer;" '+
+        'onclick="openPhotoViewer(this.src,\''+fullViewUrl+'\')" '+
+        'onerror="this.parentNode.innerHTML=\'<div style=\"width:72px;height:72px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#555\" stroke-width=\"1.5\"><path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\"></path><circle cx=\"12\" cy=\"13\" r=\"4\"></circle></svg></div>\';" '+
+        '/>';
     } else {
-      html += '<div style="width:72px;height:72px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;"><svg width=\'28\' height=\'28\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#555\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\'></path><circle cx=\'12\' cy=\'13\' r=\'4\'></circle></svg><span style=\'font-size:8px;color:#555;font-family:Montserrat,sans-serif;font-weight:600;\'>NO PHOTO</span></div>';
+      html += '<div style="width:72px;height:72px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;"><svg width=\'28\' height=\'28\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#555\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\'></path><circle cx=\'12\' cy=\'13\' r=\'4\'></circle></svg></div>';
     }
     html += '</div>';
 
@@ -2224,6 +2252,16 @@ function showToast(msg){
         <button onclick="closeEditModal()" style="background:var(--surface2);color:var(--muted);border:none;border-radius:10px;padding:14px 20px;font-family:Montserrat,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Annuler</button>
       </div>
     </div>
+  </div>
+
+  <!-- PHOTO VIEWER -->
+  <div id="photoViewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:2000;flex-direction:column;align-items:center;justify-content:center;" onclick="closePhotoViewer()">
+    <img id="photoViewerImg" src="" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:12px;"/>
+    <div style="display:flex;gap:12px;margin-top:14px;">
+      <a id="photoViewerLink" href="#" target="_blank" onclick="event.stopPropagation()" style="padding:10px 20px;background:#4285f4;color:#fff;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;">🔗 Ouvrir dans Drive</a>
+      <button onclick="closePhotoViewer()" style="padding:10px 20px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">✕ Fermer</button>
+    </div>
+    <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;">Cliquez n'importe où pour fermer</div>
   </div>
 </body>
 </html>
