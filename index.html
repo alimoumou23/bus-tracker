@@ -1771,12 +1771,9 @@ async function doCapture(){
         body: JSON.stringify({image:base64, fileName:fn, date:getDate()})
       });
       
-      // Build expected Drive folder URL (we can't get file ID without CORS)
-      // Construct month/day path to help find the file
-      var dateStr = getDate(); // DD-MM-YYYY
-      var month = dateStr.substring(6,10)+'-'+dateStr.substring(3,5);
+      // Store Drive folder as reference (CORS blocks individual file URL)
       driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
-      photoURL = driveUrl; // Link to Drive folder as reference
+      // Keep local thumbnail as photoURL for preview in app
       
     } catch(fetchErr) {
       console.log('Drive upload error:', fetchErr.message);
@@ -1821,12 +1818,12 @@ function toThumb(file){
       var img = new Image();
       img.onload = function(){
         var canvas = document.createElement('canvas');
-        var max = 200;
+        var max = 120; // Small enough for Firestore
         var w = img.width, h = img.height;
-        if(w > h){ if(w>max){h=h*max/w;w=max;} } else { if(h>max){w=w*max/h;h=max;} }
+        if(w > h){ if(w>max){h=Math.round(h*max/w);w=max;} } else { if(h>max){w=Math.round(w*max/h);h=max;} }
         canvas.width=w; canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL('image/jpeg',0.6));
+        resolve(canvas.toDataURL('image/jpeg',0.4)); // Small quality
       };
       img.src = e.target.result;
     };
