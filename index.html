@@ -465,7 +465,7 @@ body.light .depot-btn.active{color:var(--gray);}
       <div id="filteredStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
       <div id="filteredInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center;letter-spacing:1px;"></div>
       <button class="export-btn" onclick="exportCSVFiltered()"><span>📊</span> Télécharger Excel (période)</button>
-      <button class="export-btn" onclick="exportPhotosFiltered()" style="border-color:var(--film);color:var(--film);" onmouseover="this.style.borderColor='var(--film)';this.style.color='var(--film)'"><span>📸</span> Télécharger photos (période)</button>
+      <button class="export-btn" onclick="exportPhotosFiltered()" style="border-color:var(--film);color:var(--film);"><span>📦</span> Télécharger photos ZIP (période)</button>
       <button class="export-btn" onclick="deleteByDateRange()" style="border-color:#e53935;color:#e53935;" onmouseover="this.style.borderColor='#e53935';this.style.color='#e53935'"><span>🗑️</span> Supprimer enregistrements (période)</button>
     </div>
 
@@ -517,6 +517,7 @@ body.light .depot-btn.active{color:var(--gray);}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
@@ -1113,25 +1114,44 @@ function exportCSVFiltered(){
   showToast('✅ Excel téléchargé!');
 }
 
-function exportPhotosFiltered(){
+async function exportPhotosFiltered(){
   var records = getFilteredRecords();
   if(!records.length) return showToast('Aucune photo pour cette période');
-  var count = 0;
-  records.forEach(function(r, i){
-    if(r.photoURL && r.photoURL.startsWith('data:')){
-      setTimeout(function(){
-        var a = document.createElement('a');
-        a.href = r.photoURL;
-        a.download = r.fileName || ('photo_'+r.bus+'_'+r.date+'.jpg');
-        a.click();
-      }, i * 300);
-      count++;
-    }
-  });
-  if(count===0){
-    showToast('❌ Photos non disponibles (pas en cache)');
-  } else {
-    showToast('📸 Téléchargement de '+count+' photo(s)...');
+
+  var from = document.getElementById('dateFrom').value || 'debut';
+  var to = document.getElementById('dateTo').value || 'fin';
+
+  // Check if photos available
+  var withPhotos = records.filter(function(r){ return r.photoURL && r.photoURL.startsWith('data:'); });
+
+  if(withPhotos.length === 0){
+    showToast('❌ Photos non disponibles — elles sont sauvegardées sur les téléphones');
+    return;
+  }
+
+  showToast('📦 Création du ZIP...');
+
+  try {
+    var zip = new JSZip();
+    var folder = zip.folder('photos_'+from+'_au_'+to);
+
+    withPhotos.forEach(function(r){
+      // Convert base64 data URL to blob
+      var dataUrl = r.photoURL;
+      var base64 = dataUrl.split(',')[1];
+      var ext = dataUrl.indexOf('jpeg') > -1 ? 'jpg' : 'png';
+      var filename = r.fileName || ('Bus'+r.bus+'_'+r.action+'_'+r.date+'.'+ext);
+      folder.file(filename, base64, {base64: true});
+    });
+
+    var blob = await zip.generateAsync({type:'blob'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'photos_'+from+'_au_'+to+'.zip';
+    a.click();
+    showToast('✅ ZIP téléchargé! ('+withPhotos.length+' photos)');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
   }
 }
 
