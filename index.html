@@ -495,7 +495,22 @@ const storage = firebase.storage();
 
 // ══ STATE ══
 let _state = { action:'POSE', file:null, fileURL:null };
-let _cfg = { camps:[], depots:['Maarif','Sidi Barnousi','Madiouna','Bane Msik'], poseurs:[] };
+let _cfg = {
+  camps:[],
+  depots:['Maarif','Sidi Barnousi','Madiouna','Bane Msik'],
+  poseurs:['Yassin','Hamza','Othmane','Chouaib','Azize','Rachid','Adil','Hamid','Azlag'],
+  poseurCodes:{
+    '1001':'Yassin',
+    '1002':'Hamza',
+    '1003':'Othmane',
+    '1004':'Chouaib',
+    '1005':'Azize',
+    '1006':'Rachid',
+    '1007':'Adil',
+    '1008':'Hamid',
+    '1009':'Azlag'
+  }
+};
 let _records = [];
 let _sdValues = { campagne:'', depot:'', poseur:'' };
 let _histFilter = { action:'ALL', poseur:'ALL', date:getTodayStr() };
