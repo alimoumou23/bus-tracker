@@ -1938,15 +1938,23 @@ async function doCapture(){
       
       var txt = await resp.text();
       var result = null;
-      try { result = JSON.parse(txt); } catch(e){}
+      try { result = JSON.parse(txt); } catch(e){ console.log('Parse err:',e,txt.substring(0,100)); }
       
       if(result && result.success && result.fileId){
-        // Keep base64 thumbnail as photoURL (for display in app)
-        // Save Drive file URL separately for opening full photo
         driveUrl = 'https://drive.google.com/file/d/'+result.fileId+'/view';
-        // photoURL stays as base64 thumbnail ✅
+        showToast('✅ Photo Drive prête!');
+      } else if(result && result.success && result.url){
+        // Try url field if fileId missing
+        var m = result.url.match(/id=([^&]+)/);
+        if(m) driveUrl = 'https://drive.google.com/file/d/'+m[1]+'/view';
+        else driveUrl = result.url;
+        showToast('✅ Photo Drive!');
       } else {
+        // Build folder link for current day
+        var dateStr = getDate();
+        var month = dateStr.substring(6,10)+'-'+dateStr.substring(3,5);
         driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
+        console.log('Drive result:', JSON.stringify(result), 'raw:', txt.substring(0,200));
       }
       
     } catch(fetchErr) {
