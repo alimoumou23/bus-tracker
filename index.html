@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 <meta name="theme-color" content="#FDDD00"/>
 <title>CasaBus Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root{
   --yellow:#FDDD00;
@@ -359,6 +359,38 @@ body.light .depot-btn.active{color:var(--gray);}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.lang-toggle{cursor:pointer;flex-shrink:0;user-select:none;-webkit-tap-highlight-color:transparent;}
+.lang-toggle-track{
+  position:relative;
+  width:52px;height:26px;
+  background:#333;
+  border-radius:13px;
+  transition:background 0.3s;
+  display:flex;align-items:center;
+  box-sizing:border-box;
+}
+body.lang-ar .lang-toggle-track{background:#2979ff;}
+.lang-toggle-thumb{
+  position:absolute;
+  width:24px;height:20px;
+  background:#FDDD00;
+  border-radius:10px;
+  top:3px;left:3px;
+  transition:left 0.25s ease;
+  box-shadow:0 1px 3px rgba(0,0,0,0.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;font-family:'Montserrat',sans-serif;
+  color:#222;letter-spacing:0.5px;
+}
+body.lang-ar .lang-toggle-thumb{left:25px;}
+
+/* RTL Arabic styles */
+body.lang-ar { direction: rtl; font-family: 'Cairo', 'Montserrat', sans-serif; }
+body.lang-ar .tab { letter-spacing: 0; font-size: 10px; }
+body.lang-ar .hist-item { direction: rtl; }
+body.lang-ar .card { direction: rtl; }
+body.lang-ar .lbl { letter-spacing: 0; }
 </style>
 </head>
 <body>
@@ -388,9 +420,16 @@ body.light .depot-btn.active{color:var(--gray);}
       <div class="sync-dot" id="syncDot" style="opacity:0"></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:var(--gray);letter-spacing:1px;font-weight:bold;" id="userLabel"></div>
-        <div class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Dark / Light mode">
-          <div class="theme-toggle-track">
-            <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <div class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Dark / Light mode">
+            <div class="theme-toggle-track">
+              <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+            </div>
+          </div>
+          <div class="lang-toggle" onclick="toggleLang()" id="langBtn" title="FR / AR">
+            <div class="lang-toggle-track">
+              <div class="lang-toggle-thumb" id="langThumb">FR</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1246,6 +1285,130 @@ async function saveQuickEdit(id){
   } catch(e){
     showToast('❌ Erreur: '+e.message);
   }
+}
+
+
+// ══ LANG ══
+var _lang = 'fr';
+
+var _t = {
+  fr: {
+    capture: '📷 CAPTURE', equipe: '👥 ÉQUIPE', gestion: '✏️ GESTION',
+    rapport: '📊 RAPPORT', config: '⚙️ CONFIG',
+    nbus: 'N° BUS', campagne: 'CAMPAGNE', depot: 'DÉPÔT', poseur: 'POSEUR',
+    action: 'ACTION', photo: 'PHOTO',
+    pose: 'POSE', depose: 'DEPOSE', film: 'FILM',
+    habillage: 'Habillage', protection: 'Protection',
+    sel_campagne: '— Sélectionner campagne —',
+    sel_poseur: '— Sélectionner poseur —',
+    enregistrer: '📥 ENREGISTRER LA PHOTO',
+    prendre: 'PRENDRE / CHOISIR PHOTO',
+    upload: 'Envoi vers Google Drive...',
+    saved: '✅ Photo envoyée sur Google Drive!',
+    tout: 'TOUT', tous: '👥 TOUS',
+    aucune: 'AUCUNE PHOTO CE JOUR',
+    modifier: '✏️ MODIFIER',
+    sauvegarder: '💾 SAUVEGARDER',
+    annuler: 'Annuler',
+    acces: 'ACCÈS SÉCURISÉ',
+    code_hint: 'ENTREZ VOTRE CODE PERSONNEL',
+    code: 'CODE',
+    connexion: '→ CONNEXION',
+    code_error: '❌ Code incorrect',
+    informations: 'INFORMATIONS',
+    nom_fichier: 'NOM DU FICHIER',
+  },
+  ar: {
+    capture: '📷 التقاط', equipe: '👥 الفريق', gestion: '✏️ إدارة',
+    rapport: '📊 تقرير', config: '⚙️ إعداد',
+    nbus: 'رقم الحافلة', campagne: 'الحملة', depot: 'المستودع', poseur: 'المثبت',
+    action: 'العملية', photo: 'الصورة',
+    pose: 'تركيب', depose: 'فك', film: 'فيلم',
+    habillage: 'لباس', protection: 'حماية',
+    sel_campagne: '— اختر الحملة —',
+    sel_poseur: '— اختر المثبت —',
+    enregistrer: '📥 حفظ الصورة',
+    prendre: 'التقاط / اختيار صورة',
+    upload: 'الإرسال إلى Google Drive...',
+    saved: '✅ تم إرسال الصورة!',
+    tout: 'الكل', tous: '👥 الكل',
+    aucune: 'لا توجد صور اليوم',
+    modifier: '✏️ تعديل',
+    sauvegarder: '💾 حفظ',
+    annuler: 'إلغاء',
+    acces: 'دخول آمن',
+    code_hint: 'أدخل رمزك الشخصي',
+    code: 'الرمز',
+    connexion: '→ دخول',
+    code_error: '❌ رمز غير صحيح',
+    informations: 'المعلومات',
+    nom_fichier: 'اسم الملف',
+  }
+};
+
+function t(key){ return (_t[_lang] && _t[_lang][key]) || _t['fr'][key] || key; }
+
+function toggleLang(){
+  _lang = _lang === 'fr' ? 'ar' : 'fr';
+  var thumb = document.getElementById('langThumb');
+  if(thumb) thumb.textContent = _lang === 'ar' ? 'AR' : 'FR';
+  if(_lang === 'ar'){
+    document.body.classList.add('lang-ar');
+  } else {
+    document.body.classList.remove('lang-ar');
+  }
+  localStorage.setItem('lang', _lang);
+  applyTranslations();
+}
+
+function applyTranslations(){
+  // Tabs
+  var tabs = document.querySelectorAll('.tab .tab-label');
+  var tabKeys = ['capture','equipe','gestion','rapport','config'];
+  tabs.forEach(function(el,i){ if(tabKeys[i]) el.textContent = t(tabKeys[i]).replace(/^[^ ]+ /,''); });
+
+  // Login page
+  var loginTitle = document.querySelector('.login-title');
+  if(loginTitle) loginTitle.textContent = t('acces');
+  var loginSub = document.querySelector('.login-sub');
+  if(loginSub) loginSub.textContent = t('code_hint');
+  var loginLabel = document.querySelector('.login-label');
+  if(loginLabel) loginLabel.textContent = t('code');
+  var loginBtn = document.querySelector('.login-btn');
+  if(loginBtn) loginBtn.textContent = t('connexion');
+
+  // Capture labels
+  var labels = document.querySelectorAll('.lbl');
+  var labelMap = {
+    'N° BUS': 'nbus', 'CAMPAGNE': 'campagne', 'DÉPÔT': 'depot',
+    'POSEUR': 'poseur', 'ACTION': 'action', 'PHOTO': 'photo',
+    'NOM DU FICHIER': 'nom_fichier', 'INFORMATIONS': 'informations'
+  };
+  labels.forEach(function(el){
+    var key = labelMap[el.textContent.trim()];
+    if(key) el.textContent = t(key);
+  });
+
+  // Action buttons text
+  var actionLabels = document.querySelectorAll('.action-label');
+  actionLabels.forEach(function(el){
+    if(el.textContent.trim() === 'POSE' || el.textContent.trim() === 'تركيب') el.textContent = t('pose');
+    if(el.textContent.trim() === 'DEPOSE' || el.textContent.trim() === 'فك') el.textContent = t('depose');
+    if(el.textContent.trim() === 'FILM' || el.textContent.trim() === 'فيلم') el.textContent = t('film');
+  });
+
+  // Empty state
+  document.querySelectorAll('.empty-text').forEach(function(el){
+    if(el.textContent.includes('PHOTO') || el.textContent.includes('صور')) el.textContent = t('aucune');
+  });
+
+  // Capture button
+  var dlBtn = document.getElementById('dlBtn');
+  if(dlBtn && !dlBtn.disabled) dlBtn.textContent = t('enregistrer');
+
+  // Photo zone placeholder
+  var photoPlaceholder = document.querySelector('.photo-placeholder-text');
+  if(photoPlaceholder) photoPlaceholder.textContent = t('prendre');
 }
 
 // ══ TABS ══
