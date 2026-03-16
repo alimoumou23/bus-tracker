@@ -1005,7 +1005,17 @@ function busLookup(){
     var icon = r.action==='POSE'?'🖼️':r.action==='DEPOSE'?'🗑️':'🛡️';
     var isLast = i === 0; // First in sorted array = most recent
     var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
-    var hasThumb = r.photoURL && r.photoURL.startsWith('data:');
+    // Determine best thumbnail source
+    var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
+    // Also accept direct drive file thumbnail (not folder)
+    var isDriveFile = r.driveUrl && r.driveUrl.includes('/file/d/');
+    var hasThumb = hasBase64 || isDriveFile;
+    var thumbSrc = hasBase64 ? r.photoURL : '';
+    // Override thumbSrc with Drive thumbnail if we have fileId
+    if(isDriveFile && !hasBase64){
+      var fmatch = r.driveUrl.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+      if(fmatch) thumbSrc = 'https://drive.google.com/thumbnail?id='+fmatch[1]+'&sz=w300';
+    }
 
     html += '<div style="position:relative;margin-bottom:14px;">';
     // Timeline dot
@@ -1030,9 +1040,9 @@ function busLookup(){
     html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
 
     // Left: photo - use Drive thumbnail if we have fileId
-    // Use base64 thumbnail stored in Firestore for display
-    var displaySrc = thumbSrc; // base64 from Firestore
-    var fullViewUrl = driveLink || thumbSrc || '';
+    // displaySrc: base64 OR Drive thumbnail
+    var displaySrc = thumbSrc;
+    var fullViewUrl = driveLink || (hasBase64 ? r.photoURL : '') || '';
 
     html += '<div style="flex-shrink:0;">';
     if(displaySrc){
