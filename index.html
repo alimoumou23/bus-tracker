@@ -943,11 +943,17 @@ function renderDashboard(){
 
 // ══ PHOTO VIEWER ══
 function openPhotoViewer(src, fullUrl){
+  // If we have a Drive link, open it directly (no memory crash)
+  if(fullUrl && fullUrl.includes('drive.google.com/file')){
+    window.open(fullUrl, '_blank');
+    return;
+  }
+  // For base64: show in viewer but limit size
   var viewer = document.getElementById('photoViewer');
   var img = document.getElementById('photoViewerImg');
   var link = document.getElementById('photoViewerLink');
   if(!viewer) return;
-  img.src = fullUrl || src;
+  img.src = src; // show thumbnail (already small)
   link.href = fullUrl || src;
   viewer.style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -1008,8 +1014,10 @@ function busLookup(){
     var isLast = i === 0; // First in sorted array = most recent
     // Only use driveUrl if it's a real file link (not folder)
     var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
-    // If no file link, check if photoURL is a drive file link
+    // Check photoURL too
     if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+    // If driveUrl is folder, still show it as "open Drive" button
+    var driveFolderLink = (!driveLink && r.driveUrl && r.driveUrl.includes('drive.google')) ? r.driveUrl : '';
     // Determine best thumbnail source
     var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
     // Also accept direct drive file thumbnail (not folder)
@@ -1067,8 +1075,9 @@ function busLookup(){
     html += '<div style="font-size:13px;font-weight:700;color:#FDDD00;margin-bottom:4px;">👷 '+(r.poseur||'—')+'</div>';
     html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">📅 '+r.date+' · '+r.time+'</div>';
     html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
-    if(driveLink){
-      html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:6px;color:#4285f4;font-size:11px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
+    var anyDriveLink = driveLink || driveFolderLink;
+    if(anyDriveLink){
+      html += '<a href="'+anyDriveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:6px;color:#4285f4;font-size:11px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
     }
     html += '</div>';
 
@@ -1083,7 +1092,12 @@ function busLookup(){
   // Add click handlers for thumbnails
   result.querySelectorAll('.timeline-thumb').forEach(function(img){
     img.addEventListener('click', function(){
-      openPhotoViewer(this.src, this.getAttribute('data-full'));
+      var full = this.getAttribute('data-full');
+      if(full && full.includes('drive.google.com')){
+        window.open(full, '_blank');
+      } else {
+        openPhotoViewer(this.src, full);
+      }
     });
   });
 }
@@ -2074,8 +2088,10 @@ function renderHistory(){
   list.innerHTML=records.map(r=>{
     // Only use driveUrl if it's a real file link (not folder)
     var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
-    // If no file link, check if photoURL is a drive file link
+    // Check photoURL too
     if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+    // If driveUrl is folder, still show it as "open Drive" button
+    var driveFolderLink = (!driveLink && r.driveUrl && r.driveUrl.includes('drive.google')) ? r.driveUrl : '';
     var hasPhoto = driveLink || (r.photoURL && r.photoURL.startsWith('data:'));
     var canEdit = true; // all roles can edit
     return `
