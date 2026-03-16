@@ -271,6 +271,43 @@ input:focus{border-color:var(--yellow);}
 .toast.show{opacity:1;}
 .loader{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);font-size:12px;letter-spacing:1px;gap:10px;}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--yellow);transition:opacity 0.3s;}
+/* DEPOT BUTTONS */
+.depot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.depot-btn{
+  padding:12px 8px;border-radius:10px;border:2px solid var(--border);
+  cursor:pointer;font-family:'DM Mono',monospace;font-weight:500;
+  font-size:12px;letter-spacing:1px;background:var(--bg);color:var(--muted);
+  transition:all 0.15s;text-align:center;
+}
+.depot-btn.active{border-color:var(--yellow);background:rgba(253,221,0,0.1);color:var(--yellow);font-weight:700;}
+
+/* THEME TOGGLE */
+.theme-btn{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:6px 10px;
+  cursor:pointer;font-size:16px;flex-shrink:0;
+}
+
+/* LIGHT THEME */
+body.light{
+  --bg:#f5f5f5;
+  --surface:#ffffff;
+  --surface2:#ebebeb;
+  --border:#dddddd;
+  --text:#1a1a1a;
+  --muted:#888888;
+}
+body.light .header{background:var(--yellow);border-bottom:3px solid var(--gray);}
+body.light .tabs{background:#ffffff;}
+body.light .tab{color:#888;}
+body.light .tab.active{color:var(--gray);border-bottom-color:var(--gray);}
+body.light .hist-badge.pose{background:rgba(0,160,70,0.12);color:#007a35;}
+body.light .hist-badge.depose{background:rgba(200,80,0,0.12);color:#c45000;}
+body.light .hist-badge.film{background:rgba(0,80,200,0.12);color:#0050c8;}
+body.light .btn-primary{color:var(--gray);}
+body.light .filter-btn.active{color:var(--gray);}
+body.light .depot-btn.active{color:var(--gray);}
+
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -302,8 +339,11 @@ input:focus{border-color:var(--yellow);}
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="sync-dot" id="syncDot" style="opacity:0"></div>
-      <div style="font-size:10px;color:var(--gray);letter-spacing:1px;font-weight:bold;" id="userLabel"></div>
-      <div class="header-count" id="totalCount">0 photos</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:10px;color:var(--gray);letter-spacing:1px;font-weight:bold;" id="userLabel"></div>
+        <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+        <div class="header-count" id="totalCount">0 photos</div>
+      </div>
     </div>
   </div>
 
@@ -323,7 +363,10 @@ input:focus{border-color:var(--yellow);}
         <input type="number" id="busNum" placeholder="Ex: 42" oninput="updatePreview()"/>
       </div>
       <div class="field"><label class="lbl">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
-      <div class="field"><label class="lbl">DÉPÔT</label><div class="sd-wrap" id="sd-depot"></div></div>
+      <div class="field">
+        <label class="lbl">DÉPÔT</label>
+        <div class="depot-grid" id="depotBtns"></div>
+      </div>
       <div class="field" id="poseurField"><label class="lbl">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
     </div>
     <div class="card">
@@ -493,6 +536,7 @@ async function doLogin(){
 }
 
 function loginSuccess(){
+  loadTheme();
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
@@ -555,6 +599,7 @@ async function init(){
     document.getElementById('poseurField').style.display='none';
   }
   buildAllDropdowns();
+  buildDepotButtons();
   db.collection('records').orderBy('timestamp','desc').onSnapshot(snap=>{
     _records=[];
     snap.forEach(d=>_records.push({id:d.id,...d.data()}));
@@ -631,15 +676,50 @@ async function addNewDD(key,val){
   _sdValues[key]=v; closeAllDropdowns(); rebuildDD(key); updatePreview();
 }
 function rebuildDD(key){
-  const c={campagne:{cid:'sd-campagne',ph:'— Sélectionner campagne —',arr:'camps'},depot:{cid:'sd-depot',ph:'— Sélectionner dépôt —',arr:'depots'},poseur:{cid:'sd-poseur',ph:'— Sélectionner poseur —',arr:'poseurs'}};
-  const x=c[key]; buildDropdown(x.cid,key,_cfg[x.arr],x.ph);
+  if(key==='depot'){ buildDepotButtons(); return; }
+  const c={campagne:{cid:'sd-campagne',ph:'— Sélectionner campagne —',arr:'camps'},poseur:{cid:'sd-poseur',ph:'— Sélectionner poseur —',arr:'poseurs'}};
+  const x=c[key]; if(x) buildDropdown(x.cid,key,_cfg[x.arr],x.ph);
 }
 function buildAllDropdowns(){
   buildDropdown('sd-campagne','campagne',_cfg.camps,'— Sélectionner campagne —');
-  buildDropdown('sd-depot','depot',_cfg.depots,'— Sélectionner dépôt —');
+  buildDepotButtons();
   buildDropdown('sd-poseur','poseur',_cfg.poseurs,'— Sélectionner poseur —');
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.sd-wrap')) closeAllDropdowns(); });
+
+// ══ DEPOT BUTTONS ══
+function buildDepotButtons(){
+  var depots = _cfg.depots || ['Maarif','Sidi Barnousi','Madiouna','Bane Msik'];
+  var wrap = document.getElementById('depotBtns');
+  if(!wrap) return;
+  var html = '';
+  for(var i=0; i<depots.length; i++){
+    var d = depots[i];
+    var active = (_sdValues.depot===d) ? ' active' : '';
+    html += '<button class="depot-btn'+active+'" data-depot="'+d+'">'+d+'</button>';
+  }
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.depot-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ selectDepot(this.getAttribute('data-depot')); });
+  });
+}
+
+function selectDepot(d){
+  _sdValues.depot = (_sdValues.depot===d) ? '' : d;
+  buildDepotButtons();
+  updatePreview();
+}
+
+// ══ THEME ══
+function toggleTheme(){
+  var isLight = document.body.classList.toggle('light');
+  document.getElementById('themeBtn').textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+function loadTheme(){
+  var t = localStorage.getItem('theme');
+  if(t==='light'){ document.body.classList.add('light'); document.getElementById('themeBtn').textContent='🌙'; }
+}
 
 // ══ ACTION ══
 function setAction(a){
