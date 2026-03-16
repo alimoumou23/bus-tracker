@@ -229,6 +229,22 @@ input:focus{border-color:var(--yellow);}
 .hist-del{background:transparent;border:none;color:#555;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
 .hist-del:hover{color:#e53935;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+.gest-item{background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);}
+.gest-item.editing{border-color:var(--yellow);}
+.gest-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.gest-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;font-family:'Montserrat',sans-serif;}
+.gest-badge.pose{background:rgba(0,230,118,0.15);color:var(--pose);}
+.gest-badge.depose{background:rgba(255,102,0,0.15);color:var(--depose);}
+.gest-badge.film{background:rgba(41,121,255,0.15);color:var(--film);}
+.gest-actions{display:flex;gap:6px;}
+.gest-btn{padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-family:'Montserrat',sans-serif;font-weight:600;}
+.gest-edit{background:rgba(253,221,0,0.15);color:var(--yellow);}
+.gest-save{background:var(--yellow);color:var(--gray);}
+.gest-del{background:rgba(229,57,53,0.15);color:#e53935;}
+.gest-info{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.gest-field{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.gest-field label{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px;width:60px;flex-shrink:0;}
+.gest-field input,.gest-field select{flex:1;background:var(--bg);border:1px solid var(--yellow);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;}
 .empty-icon{font-size:40px;margin-bottom:12px;}
 .empty-text{font-size:12px;letter-spacing:1px;}
 
@@ -347,6 +363,7 @@ body.light .depot-btn.active{color:var(--gray);}
   <div class="tabs" id="tabsBar">
     <div class="tab active" onclick="showTab('capture',this)">📷 CAPTURE</div>
     <div class="tab" onclick="showTab('history',this)">👥 ÉQUIPE</div>
+    <div class="tab admin-tab" onclick="showTab('gestion',this)">✏️ GESTION</div>
     <div class="tab admin-tab" onclick="showTab('export',this)">📊 RAPPORT</div>
     <div class="tab admin-tab" onclick="showTab('settings',this)">⚙️ CONFIG</div>
   </div>
@@ -414,6 +431,15 @@ body.light .depot-btn.active{color:var(--gray);}
     <div class="hist-filters" id="poseurFilters"></div>
     <div class="hist-summary" id="histSummary"></div>
     <div id="histList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
+  </div>
+
+
+  <!-- GESTION -->
+  <div class="page" id="page-gestion">
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input type="text" id="gestionSearch" placeholder="🔍 Chercher num bus, campagne..." oninput="filterGestion()" style="flex:1;"/>
+    </div>
+    <div id="gestionList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
   </div>
 
   <!-- RAPPORT -->
@@ -611,10 +637,87 @@ async function init(){
     updateHeaderCount();
     if(document.getElementById('page-history').classList.contains('active')) renderHistory();
     if(document.getElementById('page-export').classList.contains('active')) renderStats();
+    if(document.getElementById('page-gestion') && document.getElementById('page-gestion').classList.contains('active')) renderGestion();
   });
 }
 
 async function saveConfig(){ try{ await db.collection('config').doc('main').set(_cfg); }catch(e){} }
+
+
+// ══ GESTION ══
+var _gestionFilter = '';
+
+function filterGestion(){
+  _gestionFilter = document.getElementById('gestionSearch').value.toLowerCase();
+  renderGestion();
+}
+
+function renderGestion(){
+  var list = document.getElementById('gestionList');
+  var records = _records.filter(function(r){
+    if(!_gestionFilter) return true;
+    return (r.bus||'').includes(_gestionFilter) ||
+           (r.campagne||'').toLowerCase().includes(_gestionFilter) ||
+           (r.poseur||'').toLowerCase().includes(_gestionFilter) ||
+           (r.depot||'').toLowerCase().includes(_gestionFilter);
+  });
+
+  if(!records.length){
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUN ENREGISTREMENT</div></div>';
+    return;
+  }
+
+  list.innerHTML = records.map(function(r){
+    var sp = (r.storagePath||'').replace(/'/g,'');
+    return '<div class="gest-item" id="gest-'+r.id+'" data-id="'+r.id+'" data-sp="'+sp+'">' +
+      '<div class="gest-header">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="gest-badge '+r.action.toLowerCase()+'">'+r.action+'</span>' +
+          '<strong style="font-family:Montserrat,sans-serif;font-size:14px;">Bus '+r.bus+'</strong>' +
+        '</div>' +
+        '<div class="gest-actions">' +
+          '<button class="gest-btn gest-edit" data-id="'+r.id+'">✏️ Modifier</button>' +
+          '<button class="gest-btn gest-del" data-id="'+r.id+'" data-sp="'+sp+'">🗑️</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="gest-info">📅 '+r.date+' '+r.time+'</div>' +
+      '<div class="gest-info">'+r.campagne+(r.depot?' · '+r.depot:'')+' · '+(r.poseur||'—')+'</div>' +
+    '</div>';
+  }).join('');
+
+  // Add event listeners after render
+  list.querySelectorAll('.gest-edit').forEach(function(btn){
+    btn.addEventListener('click', function(){ startEdit(this.getAttribute('data-id')); });
+  });
+  list.querySelectorAll('.gest-del').forEach(function(btn){
+    btn.addEventListener('click', function(){ deleteRecord(this.getAttribute('data-id'), this.getAttribute('data-sp')); });
+  });
+}
+
+
+
+async function saveEdit(id){
+  var busVal = document.getElementById('edit-bus-'+id).value;
+  var actionVal = document.getElementById('edit-action-'+id).value;
+  var campVal = document.getElementById('edit-camp-'+id).value;
+  var depotVal = document.getElementById('edit-depot-'+id).value;
+  var poseurVal = document.getElementById('edit-poseur-'+id).value;
+
+  if(!busVal){ showToast('❌ N° Bus requis'); return; }
+
+  try {
+    await db.collection('records').doc(id).update({
+      bus: String(parseInt(busVal)).padStart(3,'0'),
+      action: actionVal,
+      campagne: campVal,
+      depot: depotVal,
+      poseur: poseurVal
+    });
+    showToast('✅ Modifié avec succès');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
 
 // ══ TABS ══
 function showTab(tab, el){
@@ -624,6 +727,7 @@ function showTab(tab, el){
   el.classList.add('active');
   closeAllDropdowns();
   if(tab==='history'){ _histFilter.date=getTodayStr(); updateDateDisplay(); renderHistory(); }
+  if(tab==='gestion') renderGestion();
   if(tab==='export') renderStats();
   if(tab==='settings') renderSettings();
 }
