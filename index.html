@@ -9,63 +9,55 @@
 <title>BusTrack Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-:root {
-  --bg: #0a0a0a;
-  --surface: #141414;
-  --surface2: #1e1e1e;
-  --border: #2a2a2a;
-  --text: #f0f0f0;
-  --muted: #666;
-  --pose: #00e676;
-  --depose: #ff6d00;
-  --film: #2979ff;
-  --accent: #ff6d00;
-}
+:root{--bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--border:#2a2a2a;--text:#f0f0f0;--muted:#666;--pose:#00e676;--depose:#ff6d00;--film:#2979ff;--accent:#ff6d00;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overscroll-behavior:none;}
-
-/* HEADER */
 .header{background:var(--surface);border-bottom:3px solid var(--accent);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .header-left{display:flex;align-items:center;gap:10px;}
 .header-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);letter-spacing:2px;line-height:1;}
 .header-sub{font-size:9px;color:var(--muted);letter-spacing:3px;margin-top:2px;}
 .header-count{background:var(--accent);color:#fff;font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;letter-spacing:1px;}
-
-/* TABS */
 .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);}
 .tab{flex:1;padding:12px;text-align:center;font-size:11px;letter-spacing:2px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-
-/* PAGES */
 .page{display:none;padding:16px;max-width:520px;margin:0 auto;}
 .page.active{display:block;}
-
-/* CARDS */
 .card{background:var(--surface);border-radius:12px;padding:18px;border:1px solid var(--border);margin-bottom:14px;}
 .card-title{font-size:10px;color:var(--muted);letter-spacing:3px;margin-bottom:12px;}
-
-/* INPUTS */
 .field{margin-bottom:14px;}
 .field:last-child{margin-bottom:0;}
 label.lbl{display:block;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;}
-input[type=text],input[type=number],select{
-  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
-  padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:15px;
-  outline:none;transition:border-color 0.2s;appearance:none;-webkit-appearance:none;
-}
+input[type=text],input[type=number]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:15px;outline:none;transition:border-color 0.2s;}
 input[type=number]{font-size:22px;font-weight:500;}
-input:focus,select:focus{border-color:var(--accent);}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+input:focus{border-color:var(--accent);}
 
-/* ACTION BUTTONS */
+/* SEARCHABLE DROPDOWN */
+.sd-wrap{position:relative;}
+.sd-display{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 40px 12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color 0.2s;min-height:46px;}
+.sd-display.open{border-color:var(--accent);}
+.sd-display.has-val{color:var(--text);}
+.sd-display.empty-val{color:var(--muted);}
+.sd-display-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sd-arrow{color:var(--muted);font-size:11px;flex-shrink:0;margin-left:8px;}
+.sd-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.sd-panel.open{display:block;}
+.sd-search{padding:10px;border-bottom:1px solid var(--border);}
+.sd-search input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;}
+.sd-search input:focus{border-color:var(--accent);}
+.sd-list{max-height:180px;overflow-y:auto;}
+.sd-item{padding:11px 14px;font-size:13px;cursor:pointer;transition:background 0.1s;}
+.sd-item:hover{background:var(--border);}
+.sd-item.selected{color:var(--accent);}
+.sd-item.add-new{color:var(--accent);border-top:1px solid var(--border);font-style:italic;}
+.sd-item.add-new:hover{background:rgba(255,109,0,0.1);}
+.sd-empty{padding:12px 14px;font-size:12px;color:var(--muted);text-align:center;}
+
 .actions-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .act-btn{padding:14px 4px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'DM Mono',monospace;font-weight:500;font-size:12px;letter-spacing:1px;background:var(--bg);color:var(--muted);transition:all 0.15s;text-align:center;line-height:1.5;}
 .act-btn .act-icon{font-size:22px;display:block;margin-bottom:4px;}
 .act-btn.pose.active{border-color:var(--pose);background:rgba(0,230,118,0.08);color:var(--pose);}
 .act-btn.depose.active{border-color:var(--depose);background:rgba(255,109,0,0.08);color:var(--depose);}
 .act-btn.film.active{border-color:var(--film);background:rgba(41,121,255,0.08);color:var(--film);}
-
-/* PHOTO */
 .photo-label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);border:2px dashed var(--border);border-radius:10px;padding:28px 20px;cursor:pointer;transition:border-color 0.2s;}
 .photo-label:hover{border-color:var(--accent);}
 .photo-label .ph-icon{font-size:36px;}
@@ -73,24 +65,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .preview-wrap{position:relative;}
 .preview-img{width:100%;border-radius:10px;max-height:200px;object-fit:cover;display:block;}
 .change-photo{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;}
-
-/* FILENAME PREVIEW */
 .fname-box{background:var(--bg);border-radius:8px;padding:12px 14px;border-left:3px solid var(--accent);margin-bottom:14px;}
 .fname-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;}
 .fname-val{font-size:12px;color:var(--accent);word-break:break-all;font-weight:500;}
-
-/* BUTTONS */
 .btn-primary{width:100%;padding:16px;border-radius:10px;border:none;font-family:'DM Mono',monospace;font-weight:500;font-size:14px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;background:var(--accent);color:#fff;}
 .btn-primary:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
-.btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 18px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;}
-
-/* SUCCESS */
-.success-wrap{text-align:center;padding:20px 0;}
-.success-icon{font-size:52px;margin-bottom:12px;}
-.success-msg{font-size:13px;letter-spacing:2px;margin-bottom:6px;}
-.success-fname{font-size:11px;color:var(--muted);margin-bottom:20px;word-break:break-all;padding:0 10px;}
-
-/* HISTORY */
 .hist-filters{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;}
 .filter-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;white-space:nowrap;letter-spacing:1px;flex-shrink:0;}
 .filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -109,8 +88,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
 .empty-icon{font-size:40px;margin-bottom:12px;}
 .empty-text{font-size:12px;letter-spacing:1px;}
-
-/* STATS */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .stat-box{background:var(--surface);border-radius:10px;padding:14px;text-align:center;border:1px solid var(--border);}
 .stat-num{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;}
@@ -118,18 +95,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .stat-box.pose .stat-num{color:var(--pose);}
 .stat-box.depose .stat-num{color:var(--depose);}
 .stat-box.film .stat-num{color:var(--film);}
-
-/* EXPORT */
 .export-btn{width:100%;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;transition:all 0.2s;}
 .export-btn:hover{border-color:var(--accent);color:var(--accent);}
 .clear-btn{width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:transparent;color:#555;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:1px;cursor:pointer;margin-top:6px;}
 .clear-btn:hover{border-color:#e53935;color:#e53935;}
-
-/* SETTINGS */
-.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
-.setting-row:last-child{border-bottom:none;}
-.setting-info .s-title{font-size:13px;margin-bottom:2px;}
-.setting-info .s-sub{font-size:11px;color:var(--muted);}
 .tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .tag{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px;}
 .tag-del{cursor:pointer;color:var(--muted);font-size:14px;line-height:1;}
@@ -137,12 +106,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .add-tag-row{display:flex;gap:8px;margin-top:10px;}
 .add-tag-row input{flex:1;}
 .add-tag-btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px 16px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;}
-
-/* SCROLLBAR */
+.success-wrap{text-align:center;padding:20px 0;}
+.success-icon{font-size:52px;margin-bottom:12px;}
+.success-msg{font-size:13px;letter-spacing:2px;margin-bottom:6px;}
+.success-fname{font-size:11px;color:var(--muted);margin-bottom:20px;word-break:break-all;padding:0 10px;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .page.active{animation:fadeIn 0.25s ease;}
 </style>
@@ -160,15 +130,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('capture')">📷 CAPTURE</div>
-  <div class="tab" onclick="showTab('history')">📋 HISTORIQUE</div>
-  <div class="tab" onclick="showTab('export')">📊 RAPPORT</div>
-  <div class="tab" onclick="showTab('settings')">⚙️ CONFIG</div>
+  <div class="tab active" onclick="showTab('capture',this)">📷 CAPTURE</div>
+  <div class="tab" onclick="showTab('history',this)">📋 HISTORIQUE</div>
+  <div class="tab" onclick="showTab('export',this)">📊 RAPPORT</div>
+  <div class="tab" onclick="showTab('settings',this)">⚙️ CONFIG</div>
 </div>
 
-<!-- ═══════════ CAPTURE ═══════════ -->
+<!-- CAPTURE -->
 <div class="page active" id="page-capture">
-
   <div class="card">
     <div class="card-title">INFORMATIONS</div>
     <div class="field">
@@ -177,36 +146,24 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div class="field">
       <label class="lbl">CAMPAGNE</label>
-      <select id="campagne" onchange="handleSelectNew('campagne');updatePreview()">
-        <option value="">— Sélectionner —</option>
-      </select>
+      <div class="sd-wrap" id="sd-campagne"></div>
     </div>
     <div class="field">
       <label class="lbl">DÉPÔT</label>
-      <select id="depot" onchange="handleSelectNew('depot');updatePreview()">
-        <option value="">— Sélectionner —</option>
-      </select>
+      <div class="sd-wrap" id="sd-depot"></div>
     </div>
     <div class="field">
       <label class="lbl">POSEUR</label>
-      <select id="poseur" onchange="handleSelectNew('poseur');updatePreview()">
-        <option value="">— Sélectionner —</option>
-      </select>
+      <div class="sd-wrap" id="sd-poseur"></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">ACTION</div>
     <div class="actions-grid">
-      <button class="act-btn pose active" onclick="setAction('POSE')">
-        <span class="act-icon">📌</span>POSE
-      </button>
-      <button class="act-btn depose" onclick="setAction('DEPOSE')">
-        <span class="act-icon">🔧</span>DEPOSE
-      </button>
-      <button class="act-btn film" onclick="setAction('FILM')">
-        <span class="act-icon">🎞️</span>FILM
-      </button>
+      <button class="act-btn pose active" onclick="setAction('POSE')"><span class="act-icon">📌</span>POSE</button>
+      <button class="act-btn depose" onclick="setAction('DEPOSE')"><span class="act-icon">🔧</span>DEPOSE</button>
+      <button class="act-btn film" onclick="setAction('FILM')"><span class="act-icon">🎞️</span>FILM</button>
     </div>
   </div>
 
@@ -229,59 +186,39 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="btnArea">
     <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>⬇️ ENREGISTRER LA PHOTO</button>
   </div>
-
 </div>
 
-<!-- ═══════════ HISTORY ═══════════ -->
+<!-- HISTORY -->
 <div class="page" id="page-history">
-  <div class="hist-filters" id="histFilters">
-    <button class="filter-btn active" onclick="filterHist('ALL')">TOUT</button>
-    <button class="filter-btn" onclick="filterHist('POSE')">📌 POSE</button>
-    <button class="filter-btn" onclick="filterHist('DEPOSE')">🔧 DEPOSE</button>
-    <button class="filter-btn" onclick="filterHist('FILM')">🎞️ FILM</button>
+  <div class="hist-filters">
+    <button class="filter-btn active" onclick="filterHist('ALL',this)">TOUT</button>
+    <button class="filter-btn" onclick="filterHist('POSE',this)">📌 POSE</button>
+    <button class="filter-btn" onclick="filterHist('DEPOSE',this)">🔧 DEPOSE</button>
+    <button class="filter-btn" onclick="filterHist('FILM',this)">🎞️ FILM</button>
   </div>
   <div id="histList"></div>
 </div>
 
-<!-- ═══════════ EXPORT ═══════════ -->
+<!-- EXPORT -->
 <div class="page" id="page-export">
-
   <div class="stats-grid">
-    <div class="stat-box pose">
-      <div class="stat-num" id="statPose">0</div>
-      <div class="stat-lbl">POSE</div>
-    </div>
-    <div class="stat-box depose">
-      <div class="stat-num" id="statDepose">0</div>
-      <div class="stat-lbl">DEPOSE</div>
-    </div>
-    <div class="stat-box film">
-      <div class="stat-num" id="statFilm">0</div>
-      <div class="stat-lbl">FILM</div>
-    </div>
+    <div class="stat-box pose"><div class="stat-num" id="statPose">0</div><div class="stat-lbl">POSE</div></div>
+    <div class="stat-box depose"><div class="stat-num" id="statDepose">0</div><div class="stat-lbl">DEPOSE</div></div>
+    <div class="stat-box film"><div class="stat-num" id="statFilm">0</div><div class="stat-lbl">FILM</div></div>
   </div>
-
   <div class="card">
     <div class="card-title">EXPORTER</div>
-    <button class="export-btn" onclick="exportCSV()">
-      <span>📊</span> Exporter CSV (Excel)
-    </button>
-    <button class="export-btn" onclick="exportTXT()">
-      <span>📄</span> Exporter liste TXT
-    </button>
+    <button class="export-btn" onclick="exportCSV()"><span>📊</span> Exporter CSV (Excel)</button>
+    <button class="export-btn" onclick="exportTXT()"><span>📄</span> Exporter liste TXT</button>
   </div>
-
   <div class="card">
     <div class="card-title">DONNÉES</div>
     <button class="clear-btn" onclick="clearAll()">🗑️ Effacer tout l'historique</button>
   </div>
-
 </div>
 
-<!-- ═══════════ SETTINGS ═══════════ -->
+<!-- SETTINGS -->
 <div class="page" id="page-settings">
-
-  <!-- CAMPAGNES -->
   <div class="card">
     <div class="card-title">CAMPAGNES</div>
     <div class="tag-list" id="campList"></div>
@@ -290,8 +227,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button class="add-tag-btn" onclick="addItem('camp')">+ Ajouter</button>
     </div>
   </div>
-
-  <!-- DÉPÔTS -->
   <div class="card">
     <div class="card-title">DÉPÔTS</div>
     <div class="tag-list" id="depotList"></div>
@@ -300,8 +235,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button class="add-tag-btn" onclick="addItem('depot')">+ Ajouter</button>
     </div>
   </div>
-
-  <!-- POSEURS -->
   <div class="card">
     <div class="card-title">POSEURS</div>
     <div class="tag-list" id="poseurList"></div>
@@ -310,345 +243,329 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button class="add-tag-btn" onclick="addItem('poseur')">+ Ajouter</button>
     </div>
   </div>
-
 </div>
 
 <script>
-// ══════════ STATE ══════════
-let state = {
-  action: 'POSE',
-  file: null,
-  fileURL: null,
-  filter: 'ALL'
-};
+// ══ STATE ══
+let state = { action:'POSE', file:null, fileURL:null, filter:'ALL' };
+let db = { records:[], camps:[], depots:[], poseurs:[] };
 
-let db = {
-  records: [],
-  camps: [],
-  depots: [],
-  poseurs: []
-};
+// Selected values for searchable dropdowns
+let sdValues = { campagne:'', depot:'', poseur:'' };
 
-// ══════════ INIT ══════════
-function init() {
+function init(){
   const saved = localStorage.getItem('bustrack_db');
-  if (saved) db = JSON.parse(saved);
-  renderAll();
+  if(saved) db = JSON.parse(saved);
+  buildAllDropdowns();
+  updateHeaderCount();
+}
+function save(){ localStorage.setItem('bustrack_db', JSON.stringify(db)); }
+
+// ══ TABS ══
+function showTab(tab, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  el.classList.add('active');
+  closeAllDropdowns();
+  if(tab==='history') renderHistory();
+  if(tab==='export') renderStats();
+  if(tab==='settings') renderSettings();
 }
 
-function save() {
-  localStorage.setItem('bustrack_db', JSON.stringify(db));
+// ══ SEARCHABLE DROPDOWN ══
+function buildDropdown(containerId, key, items, placeholder){
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = `
+    <div class="sd-display ${sdValues[key]?'has-val':'empty-val'}" id="sd-btn-${key}" onclick="toggleDropdown('${key}')">
+      <span class="sd-display-text">${sdValues[key]||placeholder}</span>
+      <span class="sd-arrow">▼</span>
+    </div>
+    <div class="sd-panel" id="sd-panel-${key}">
+      <div class="sd-search">
+        <input type="text" placeholder="Rechercher..." id="sd-search-${key}" oninput="filterDropdown('${key}')" onclick="event.stopPropagation()"/>
+      </div>
+      <div class="sd-list" id="sd-list-${key}">
+        ${renderDropdownItems(key, items, '')}
+      </div>
+    </div>
+  `;
 }
 
-// ══════════ TABS ══════════
-function showTab(tab) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
-  event.target.classList.add('active');
-  if (tab === 'history') renderHistory();
-  if (tab === 'export') renderStats();
-  if (tab === 'settings') renderSettings();
+function renderDropdownItems(key, items, query){
+  const filtered = query ? items.filter(i=>i.toLowerCase().includes(query.toLowerCase())) : items;
+  let html = '';
+  if(!filtered.length && !query){
+    html += `<div class="sd-empty">Aucun élément — ajoutez depuis CONFIG</div>`;
+  } else if(!filtered.length){
+    html += `<div class="sd-empty">Aucun résultat</div>`;
+  } else {
+    filtered.forEach(item=>{
+      html += `<div class="sd-item${sdValues[key]===item?' selected':''}" onclick="selectDropdown('${key}','${item.replace(/'/g,"\\'")}')">
+        ${item}${sdValues[key]===item?' ✓':''}
+      </div>`;
+    });
+  }
+  // Always show "add new" option
+  const label = {campagne:'campagne',depot:'dépôt',poseur:'poseur'}[key];
+  const newVal = query || '';
+  html += `<div class="sd-item add-new" onclick="addNewFromDropdown('${key}','${newVal.replace(/'/g,"\\'")}')">
+    ➕ ${newVal ? 'Ajouter "'+newVal+'"' : 'Ajouter nouveau '+label+'...'}
+  </div>`;
+  return html;
 }
 
-// ══════════ ACTION ══════════
-function setAction(a) {
-  state.action = a;
-  document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.act-btn.' + a.toLowerCase()).classList.add('active');
+function toggleDropdown(key){
+  const panel = document.getElementById('sd-panel-'+key);
+  const isOpen = panel.classList.contains('open');
+  closeAllDropdowns();
+  if(!isOpen){
+    panel.classList.add('open');
+    document.getElementById('sd-btn-'+key).classList.add('open');
+    setTimeout(()=>{ const s = document.getElementById('sd-search-'+key); if(s) s.focus(); },100);
+  }
+}
+
+function closeAllDropdowns(){
+  document.querySelectorAll('.sd-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.sd-display').forEach(b=>b.classList.remove('open'));
+}
+
+function filterDropdown(key){
+  const query = document.getElementById('sd-search-'+key).value;
+  const arrMap = {campagne:'camps',depot:'depots',poseur:'poseurs'};
+  document.getElementById('sd-list-'+key).innerHTML = renderDropdownItems(key, db[arrMap[key]], query);
+}
+
+function selectDropdown(key, val){
+  sdValues[key] = val;
+  closeAllDropdowns();
+  rebuildDropdown(key);
   updatePreview();
 }
 
-// ══════════ FILE ══════════
-function handleFile(input) {
-  const f = input.files[0];
-  if (!f) return;
-  state.file = f;
-  state.fileURL = URL.createObjectURL(f);
+function addNewFromDropdown(key, val){
+  const arrMap = {campagne:'camps',depot:'depots',poseur:'poseurs'};
+  const labelMap = {campagne:'Campagne',depot:'Dépôt',poseur:'Poseur'};
+  const input = val || prompt('Nouveau '+labelMap[key]+':');
+  if(!input || !input.trim()) return;
+  const v = input.trim();
+  if(!db[arrMap[key]].includes(v)){
+    db[arrMap[key]].push(v);
+    save();
+  }
+  sdValues[key] = v;
+  closeAllDropdowns();
+  rebuildDropdown(key);
+  updatePreview();
+}
+
+function rebuildDropdown(key){
+  const config = {
+    campagne:{containerId:'sd-campagne',placeholder:'— Sélectionner campagne —',arr:'camps'},
+    depot:{containerId:'sd-depot',placeholder:'— Sélectionner dépôt —',arr:'depots'},
+    poseur:{containerId:'sd-poseur',placeholder:'— Sélectionner poseur —',arr:'poseurs'}
+  };
+  const c = config[key];
+  buildDropdown(c.containerId, key, db[c.arr], c.placeholder);
+}
+
+function buildAllDropdowns(){
+  buildDropdown('sd-campagne','campagne',db.camps,'— Sélectionner campagne —');
+  buildDropdown('sd-depot','depot',db.depots,'— Sélectionner dépôt —');
+  buildDropdown('sd-poseur','poseur',db.poseurs,'— Sélectionner poseur —');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.sd-wrap')) closeAllDropdowns();
+});
+
+// ══ ACTION ══
+function setAction(a){
+  state.action = a;
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.act-btn.'+a.toLowerCase()).classList.add('active');
+  updatePreview();
+}
+
+// ══ FILE ══
+function handleFile(input){
+  const f = input.files[0]; if(!f) return;
+  state.file = f; state.fileURL = URL.createObjectURL(f);
   document.getElementById('photoArea').innerHTML = `
     <div class="preview-wrap">
       <img src="${state.fileURL}" class="preview-img"/>
       <button class="change-photo" onclick="changePhoto()">🔄 Changer</button>
-    </div>
-  `;
+    </div>`;
   updatePreview();
 }
-
-function changePhoto() {
-  state.file = null; state.fileURL = null;
+function changePhoto(){
+  state.file=null; state.fileURL=null;
   document.getElementById('photoArea').innerHTML = `
     <label for="fileInput" class="photo-label">
       <span class="ph-icon">📷</span>
       <span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
-    </label>
-  `;
-  document.getElementById('fileInput').value = '';
+    </label>`;
+  document.getElementById('fileInput').value='';
   updatePreview();
 }
 
-// ══════════ FILENAME ══════════
-function pad(n) { return String(n).padStart(3,'0'); }
-function getDate() {
-  const d = new Date();
-  return [d.getDate(), d.getMonth()+1, d.getFullYear()].map(x => String(x).padStart(2,'0')).join('-');
-}
+// ══ FILENAME ══
+function pad(n){return String(n).padStart(3,'0');}
+function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');}
 
-function buildFileName() {
+function buildFileName(){
   const bus = document.getElementById('busNum').value.trim();
-  const camp = document.getElementById('campagne').value;
-  if (!bus || !camp || !state.file) return null;
+  const camp = sdValues.campagne;
+  if(!bus||!camp||!state.file) return null;
   const ext = state.file.name.split('.').pop().toLowerCase();
-  const campClean = camp.replace(/\s+/g,'-');
-  return `${pad(bus)}_${state.action}_${campClean}_${getDate()}.${ext}`;
+  return `${pad(bus)}_${state.action}_${camp.replace(/\s+/g,'-')}_${getDate()}.${ext}`;
 }
 
-function updatePreview() {
+function updatePreview(){
   const fn = buildFileName();
   const box = document.getElementById('fnameBox');
-  const val = document.getElementById('fnameVal');
   const btn = document.getElementById('dlBtn');
-  if (fn) {
-    box.style.display = 'block';
-    val.textContent = '📎 ' + fn;
-    btn.disabled = false;
+  if(fn){
+    box.style.display='block';
+    document.getElementById('fnameVal').textContent='📎 '+fn;
+    btn.disabled=false;
   } else {
-    box.style.display = 'none';
-    btn.disabled = true;
+    box.style.display='none';
+    btn.disabled=true;
   }
 }
 
-// ══════════ CAPTURE ══════════
-function doCapture() {
-  const fn = buildFileName();
-  if (!fn) return;
-
-  // Download file with correct name
+// ══ CAPTURE ══
+function doCapture(){
+  const fn = buildFileName(); if(!fn) return;
   const a = document.createElement('a');
-  a.href = state.fileURL;
-  a.download = fn;
-  a.click();
-
-  // Save record
-  const bus = document.getElementById('busNum').value.trim();
-  const camp = document.getElementById('campagne').value;
-  const depot = document.getElementById('depot').value;
-  const poseur = document.getElementById('poseur').value;
-
+  a.href=state.fileURL; a.download=fn; a.click();
   db.records.unshift({
-    id: Date.now(),
-    bus: pad(bus),
-    action: state.action,
-    campagne: camp,
-    depot,
-    poseur,
-    fileName: fn,
-    thumb: state.fileURL,
-    date: getDate(),
-    time: new Date().toLocaleTimeString('fr-FR')
+    id:Date.now(), bus:pad(document.getElementById('busNum').value.trim()),
+    action:state.action, campagne:sdValues.campagne, depot:sdValues.depot,
+    poseur:sdValues.poseur, fileName:fn, thumb:state.fileURL,
+    date:getDate(), time:new Date().toLocaleTimeString('fr-FR')
   });
-  save();
-  updateHeaderCount();
-
-  // Show success
-  const ext = state.file.name.split('.').pop();
+  save(); updateHeaderCount();
   document.getElementById('btnArea').innerHTML = `
     <div class="success-wrap">
       <div class="success-icon">✅</div>
       <div class="success-msg" style="color:var(--pose)">PHOTO ENREGISTRÉE !</div>
       <div class="success-fname">${fn}</div>
       <button class="btn-primary" onclick="resetCapture()" style="max-width:220px;margin:0 auto;">➕ NOUVELLE PHOTO</button>
-    </div>
-  `;
+    </div>`;
 }
 
-function resetCapture() {
-  document.getElementById('busNum').value = '';
-  document.getElementById('campagne').value = '';
-  document.getElementById('depot').value = '';
-  document.getElementById('poseur').value = '';
-  state.file = null; state.fileURL = null; state.action = 'POSE';
-  document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('active'));
+function resetCapture(){
+  document.getElementById('busNum').value='';
+  sdValues={campagne:'',depot:'',poseur:''};
+  state.file=null; state.fileURL=null; state.action='POSE';
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.act-btn.pose').classList.add('active');
-  document.getElementById('photoArea').innerHTML = `
+  document.getElementById('photoArea').innerHTML=`
     <label for="fileInput" class="photo-label">
       <span class="ph-icon">📷</span>
       <span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
-    </label>
-  `;
-  document.getElementById('fileInput').value = '';
-  document.getElementById('fnameBox').style.display = 'none';
-  document.getElementById('btnArea').innerHTML = `
-    <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>⬇️ ENREGISTRER LA PHOTO</button>
-  `;
+    </label>`;
+  document.getElementById('fileInput').value='';
+  document.getElementById('fnameBox').style.display='none';
+  document.getElementById('btnArea').innerHTML=`
+    <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>⬇️ ENREGISTRER LA PHOTO</button>`;
+  buildAllDropdowns();
 }
 
-// ══════════ HISTORY ══════════
-function filterHist(f) {
-  state.filter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+// ══ HISTORY ══
+function filterHist(f,el){
+  state.filter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
   renderHistory();
 }
-
-function renderHistory() {
-  const list = document.getElementById('histList');
-  const records = state.filter === 'ALL' ? db.records : db.records.filter(r => r.action === state.filter);
-  if (!records.length) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO</div></div>`;
-    return;
-  }
-  list.innerHTML = records.map(r => `
+function renderHistory(){
+  const list=document.getElementById('histList');
+  const records=state.filter==='ALL'?db.records:db.records.filter(r=>r.action===state.filter);
+  if(!records.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO</div></div>`;return;}
+  list.innerHTML=records.map(r=>`
     <div class="hist-item">
-      <img class="hist-thumb" src="${r.thumb || ''}" onerror="this.style.display='none'"/>
+      <img class="hist-thumb" src="${r.thumb||''}" onerror="this.style.display='none'"/>
       <div class="hist-info">
         <div class="hist-top">
           <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
           <span class="hist-bus">Bus ${r.bus}</span>
         </div>
         <div class="hist-fname">${r.fileName}</div>
-        <div class="hist-meta">${r.campagne} ${r.depot ? '· ' + r.depot : ''} ${r.poseur ? '· ' + r.poseur : ''} · ${r.date} ${r.time}</div>
+        <div class="hist-meta">${r.campagne}${r.depot?' · '+r.depot:''}${r.poseur?' · '+r.poseur:''} · ${r.date} ${r.time}</div>
       </div>
       <button class="hist-dl" onclick="reDownload(${r.id})" title="Re-télécharger">⬇️</button>
-    </div>
-  `).join('');
+    </div>`).join('');
+}
+function reDownload(id){
+  const r=db.records.find(x=>x.id===id);
+  if(!r||!r.thumb) return alert('Photo non disponible');
+  const a=document.createElement('a'); a.href=r.thumb; a.download=r.fileName; a.click();
 }
 
-function reDownload(id) {
-  const r = db.records.find(x => x.id === id);
-  if (!r || !r.thumb) return alert('Photo non disponible (session fermée)');
-  const a = document.createElement('a');
-  a.href = r.thumb; a.download = r.fileName; a.click();
+// ══ STATS ══
+function renderStats(){
+  document.getElementById('statPose').textContent=db.records.filter(r=>r.action==='POSE').length;
+  document.getElementById('statDepose').textContent=db.records.filter(r=>r.action==='DEPOSE').length;
+  document.getElementById('statFilm').textContent=db.records.filter(r=>r.action==='FILM').length;
 }
-
-// ══════════ STATS & EXPORT ══════════
-function renderStats() {
-  const pose = db.records.filter(r => r.action === 'POSE').length;
-  const depose = db.records.filter(r => r.action === 'DEPOSE').length;
-  const film = db.records.filter(r => r.action === 'FILM').length;
-  document.getElementById('statPose').textContent = pose;
-  document.getElementById('statDepose').textContent = depose;
-  document.getElementById('statFilm').textContent = film;
+function exportCSV(){
+  if(!db.records.length) return alert('Aucune donnée');
+  const h=['N°Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
+  const rows=db.records.map(r=>[r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time]);
+  const csv=[h,...rows].map(r=>r.map(v=>`"${v||''}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`rapport_${getDate()}.csv`; a.click();
 }
-
-function exportCSV() {
-  if (!db.records.length) return alert('Aucune donnée à exporter');
-  const headers = ['N°Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
-  const rows = db.records.map(r => [r.bus, r.action, r.campagne, r.depot, r.poseur, r.fileName, r.date, r.time]);
-  const csv = [headers, ...rows].map(r => r.map(v => `"${v||''}"`).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `rapport_bustrack_${getDate()}.csv`;
-  a.click();
-}
-
-function exportTXT() {
-  if (!db.records.length) return alert('Aucune donnée à exporter');
-  const lines = ['RAPPORT BUSTRACK - ' + getDate(), '='.repeat(40), ''];
-  db.records.forEach(r => {
+function exportTXT(){
+  if(!db.records.length) return alert('Aucune donnée');
+  const lines=['RAPPORT BUSTRACK - '+getDate(),'='.repeat(40),''];
+  db.records.forEach(r=>{
     lines.push(`[${r.action}] Bus ${r.bus} | ${r.campagne} | ${r.depot||'-'} | ${r.poseur||'-'} | ${r.date} ${r.time}`);
     lines.push(`  → ${r.fileName}`);
   });
-  const blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `rapport_bustrack_${getDate()}.txt`;
-  a.click();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8;'}));
+  a.download=`rapport_${getDate()}.txt`; a.click();
+}
+function clearAll(){
+  if(!confirm('Effacer tout ?')) return;
+  db.records=[]; save(); renderHistory(); renderStats(); updateHeaderCount();
 }
 
-function clearAll() {
-  if (!confirm('Effacer tout l\'historique ?')) return;
-  db.records = []; save(); renderHistory(); renderStats(); updateHeaderCount();
+// ══ SETTINGS ══
+function renderSettings(){
+  renderTags('camp','campList',db.camps);
+  renderTags('depot','depotList',db.depots);
+  renderTags('poseur','poseurList',db.poseurs);
 }
-
-// ══════════ SETTINGS ══════════
-function renderSettings() {
-  renderTags('camp', 'campList', db.camps);
-  renderTags('depot', 'depotList', db.depots);
-  renderTags('poseur', 'poseurList', db.poseurs);
+function renderTags(type,listId,items){
+  document.getElementById(listId).innerHTML=items.length
+    ?items.map((item,i)=>`<div class="tag"><span>${item}</span><span class="tag-del" onclick="removeItem('${type}',${i})">×</span></div>`).join('')
+    :'<span style="font-size:11px;color:var(--muted)">Aucun élément</span>';
 }
-
-function renderTags(type, listId, items) {
-  document.getElementById(listId).innerHTML = items.length
-    ? items.map((item,i) => `
-        <div class="tag">
-          <span>${item}</span>
-          <span class="tag-del" onclick="removeItem('${type}',${i})">×</span>
-        </div>
-      `).join('')
-    : '<span style="font-size:11px;color:var(--muted)">Aucun élément</span>';
+function addItem(type){
+  const inputMap={camp:'newCamp',depot:'newDepot',poseur:'newPoseur'};
+  const arrMap={camp:'camps',depot:'depots',poseur:'poseurs'};
+  const input=document.getElementById(inputMap[type]);
+  const val=input.value.trim(); if(!val) return;
+  if(!db[arrMap[type]].includes(val)){ db[arrMap[type]].push(val); save(); renderSettings(); buildAllDropdowns(); }
+  input.value='';
 }
-
-function addItem(type) {
-  const inputMap = {camp:'newCamp', depot:'newDepot', poseur:'newPoseur'};
-  const arrMap = {camp:'camps', depot:'depots', poseur:'poseurs'};
-  const input = document.getElementById(inputMap[type]);
-  const val = input.value.trim();
-  if (!val) return;
-  if (!db[arrMap[type]].includes(val)) {
-    db[arrMap[type]].push(val);
-    save();
-    renderSettings();
-    refreshSelects();
-  }
-  input.value = '';
+function removeItem(type,idx){
+  const arrMap={camp:'camps',depot:'depots',poseur:'poseurs'};
+  db[arrMap[type]].splice(idx,1); save(); renderSettings(); buildAllDropdowns();
 }
+function updateHeaderCount(){ document.getElementById('totalCount').textContent=db.records.length+' photos'; }
 
-function removeItem(type, idx) {
-  const arrMap = {camp:'camps', depot:'depots', poseur:'poseurs'};
-  db[arrMap[type]].splice(idx, 1);
-  save(); renderSettings(); refreshSelects();
-}
-
-function refreshSelects() {
-  const fillSelect = (id, items) => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— Sélectionner —</option>';
-    items.forEach(i => { const o = document.createElement('option'); o.value=i; o.textContent=i; if(i===cur) o.selected=true; sel.appendChild(o); });
-    sel.innerHTML += '<option value="__new__">➕ Ajouter nouveau...</option>';
-  };
-  fillSelect('campagne', db.camps);
-  fillSelect('depot', db.depots);
-  fillSelect('poseur', db.poseurs);
-}
-
-function handleSelectNew(id) {
-  const sel = document.getElementById(id);
-  if (sel.value !== '__new__') return;
-  const labelMap = { campagne: 'Campagne', depot: 'Dépôt', poseur: 'Poseur' };
-  const arrMap = { campagne: 'camps', depot: 'depots', poseur: 'poseurs' };
-  const val = prompt('Ajouter ' + labelMap[id] + ':');
-  if (val && val.trim()) {
-    const v = val.trim();
-    if (!db[arrMap[id]].includes(v)) {
-      db[arrMap[id]].push(v);
-      save();
-      refreshSelects();
-    }
-    document.getElementById(id).value = v;
-  } else {
-    sel.value = '';
-  }
-  updatePreview();
-}
-
-function updateHeaderCount() {
-  document.getElementById('totalCount').textContent = db.records.length + ' photos';
-}
-
-function renderAll() {
-  refreshSelects();
-  updateHeaderCount();
-}
-
-// Enter key on settings inputs
-['newCamp','newDepot','newPoseur'].forEach(id => {
-  document.getElementById(id)?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const map = {newCamp:'camp', newDepot:'depot', newPoseur:'poseur'};
-      addItem(map[id]);
-    }
+['newCamp','newDepot','newPoseur'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const map={newCamp:'camp',newDepot:'depot',newPoseur:'poseur'};addItem(map[id]);}
   });
 });
 
