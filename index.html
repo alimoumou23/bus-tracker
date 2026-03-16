@@ -1388,6 +1388,10 @@ var _t = {
     code_error: '❌ رمز غير صحيح',
     informations: 'المعلومات',
     nom_fichier: 'اسم الملف',
+    depot_Maarif: 'معاريف',
+    depot_Madiouna: 'مديونة',
+    depot_Sidi_Barnousi: 'سيدي برنوصي',
+    depot_Bane_Msik: 'بن مسيك',
   }
 };
 
@@ -1531,6 +1535,8 @@ function buildDepotButtons(){
   var html = '';
   for(var i=0; i<depots.length; i++){
     var d = depots[i];
+    var dKey = 'depot_' + d.replace(/ /g,'_');
+    var dLabel = (_lang === 'ar' && _t.ar && _t.ar[dKey]) ? _t.ar[dKey] : d;
     var active = (_sdValues.depot===d) ? ' active' : '';
     html += '<button class="depot-btn'+active+'" data-depot="'+d+'">'+dLabel+'</button>';
   }
