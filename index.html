@@ -620,10 +620,22 @@ function getTodayStr(){
 }
 
 async function init(){
+  // Load config from Firebase FIRST before showing UI
   try {
     const cfgDoc = await db.collection('config').doc('main').get();
-    if(cfgDoc.exists){ const d=cfgDoc.data(); if(d.camps)_cfg.camps=d.camps; if(d.depots)_cfg.depots=d.depots; if(d.poseurs)_cfg.poseurs=d.poseurs; }
-  } catch(e){}
+    if(cfgDoc.exists){
+      const d = cfgDoc.data();
+      // Only replace if Firebase has data (don't overwrite with empty)
+      if(d.camps && d.camps.length) _cfg.camps = d.camps;
+      if(d.depots && d.depots.length) _cfg.depots = d.depots;
+      if(d.poseurs && d.poseurs.length) _cfg.poseurs = d.poseurs;
+      if(d.poseurCodes) _cfg.poseurCodes = Object.assign({}, _cfg.poseurCodes, d.poseurCodes);
+    } else {
+      // First time: save defaults to Firebase
+      await saveConfig();
+    }
+  } catch(e){ console.warn('Config load error:', e); }
+
   // Auto-set poseur from login
   if(_currentUser && _currentUser.role==='equipe'){
     _sdValues.poseur = _currentUser.name;
@@ -631,6 +643,8 @@ async function init(){
   }
   buildAllDropdowns();
   buildDepotButtons();
+
+  // Real-time listener for records
   db.collection('records').orderBy('timestamp','desc').onSnapshot(snap=>{
     _records=[];
     snap.forEach(d=>_records.push({id:d.id,...d.data()}));
@@ -641,7 +655,12 @@ async function init(){
   });
 }
 
-async function saveConfig(){ try{ await db.collection('config').doc('main').set(_cfg); }catch(e){} }
+async function saveConfig(){
+  try{
+    // Use merge:true to avoid overwriting fields we didn't touch
+    await db.collection('config').doc('main').set(_cfg, {merge: true});
+  }catch(e){ console.warn('Save config error:', e); }
+}
 
 
 // ══ GESTION ══
