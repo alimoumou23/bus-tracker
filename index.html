@@ -451,7 +451,7 @@ body.light .depot-btn.active{color:var(--gray);}
     </div>
     <div class="card">
       <div class="card-title">EXPORTER</div>
-      <button class="export-btn" onclick="exportCSV()"><span>📊</span> Exporter CSV (Excel)</button>
+      <button class="export-btn" onclick="exportCSV()"><span>📊</span> Exporter tableau Excel</button>
       <button class="export-btn" onclick="exportTXT()"><span>📄</span> Exporter liste TXT</button>
     </div>
   </div>
@@ -1006,11 +1006,17 @@ function exportCSV(){
   if(!_records.length) return showToast('Aucune donnée');
   var h=['N_Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
   var rows=_records.map(function(r){return [r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time];});
-  var csv=[h].concat(rows).map(function(r){return r.map(function(v){return '"'+(v||'')+'"';}).join(',');}).join('\n');
+  // Use semicolon separator for Excel compatibility + BOM
+  var sep = ';';
+  var csv='sep='+sep+'\n'+[h].concat(rows).map(function(r){
+    return r.map(function(v){ return '"'+(v||'')+'"'; }).join(sep);
+  }).join('\n');
+  var bom = '\uFEFF';
   var a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='rapport_'+getDate()+'.csv';
+  a.href=URL.createObjectURL(new Blob([bom+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='rapport_casabus_'+getDate()+'.csv';
   a.click();
+  showToast('✅ Excel téléchargé!');
 }
 function exportTXT(){
   if(!_records.length) return showToast('Aucune donnée');
