@@ -1011,20 +1011,18 @@ function busLookup(){
     html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📅 '+r.date+' · '+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
     html += '<div style="font-size:13px;font-weight:600;color:#FDDD00;margin-bottom:8px;">👷 '+(r.poseur||'—')+'</div>';
 
-    // Photo
-    if(hasThumb || driveLink){
-      html += '<div style="display:flex;gap:8px;align-items:center;">';
-      if(hasThumb){
-        var imgLink = driveLink || r.photoURL;
-        html += '<img src="'+r.photoURL+'" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open(this.dataset.link,\'_blank\')" data-link="'+imgLink+'"/>';
-      }
-      if(driveLink){
-        html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:8px;color:#4285f4;font-size:12px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
-      }
-      html += '</div>';
-    } else {
-      html += '<div style="font-size:11px;color:#666;">📷 Pas de photo</div>';
+    // Photo - show thumbnail if available, always show Drive link
+    var thumbSrc = hasThumb ? r.photoURL : '';
+    html += '<div style="display:flex;gap:8px;align-items:center;">';
+    if(thumbSrc){
+      html += '<img src="'+thumbSrc+'" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);" onclick="window.open(\''+( driveLink||thumbSrc)+'\',\'_blank\')"/>';
     }
+    if(driveLink){
+      html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:8px 14px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:8px;color:#4285f4;font-size:12px;font-weight:600;text-decoration:none;">🔗 Voir photo</a>';
+    } else if(!thumbSrc){
+      html += '<span style="font-size:11px;color:#555;">📷 Pas de photo</span>';
+    }
+    html += '</div>';
 
     html += '</div></div>';
   });
