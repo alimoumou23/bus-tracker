@@ -1424,11 +1424,11 @@ function applyTranslations(){
   var loginBtn = document.querySelector('.login-btn');
   if(loginBtn) loginBtn.textContent = t('connexion');
 
-  // Dropdown placeholders (rebuilt by buildAllDropdowns)
-  var campSel = document.getElementById('campagneSelect');
-  if(campSel && campSel.options[0]) campSel.options[0].text = t('sel_campagne');
-  var poseurSel = document.getElementById('poseurSelect');
-  if(poseurSel && poseurSel.options[0]) poseurSel.options[0].text = t('sel_poseur');
+  // Rebuild custom dropdowns with new language placeholder
+  var campDisplay = document.querySelector('#sd-campagne .sd-display');
+  if(campDisplay && !_sdValues.campagne) campDisplay.textContent = t('sel_campagne');
+  var poseurDisplay = document.querySelector('#sd-poseur .sd-display');
+  if(poseurDisplay && !_sdValues.poseur) poseurDisplay.textContent = t('sel_poseur');
 
   // EQUIPE empty state (dynamic)
   document.querySelectorAll('.empty-text').forEach(function(el){
@@ -1514,9 +1514,9 @@ function rebuildDD(key){
   const x=c[key]; if(x) buildDropdown(x.cid,key,_cfg[x.arr],x.ph);
 }
 function buildAllDropdowns(){
-  buildDropdown('sd-campagne','campagne',_cfg.camps,'— Sélectionner campagne —');
+  buildDropdown('sd-campagne','campagne',_cfg.camps, t('sel_campagne'));
   buildDepotButtons();
-  buildDropdown('sd-poseur','poseur',_cfg.poseurs,'— Sélectionner poseur —');
+  buildDropdown('sd-poseur','poseur',_cfg.poseurs, t('sel_poseur'));
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.sd-wrap')) closeAllDropdowns(); });
 
