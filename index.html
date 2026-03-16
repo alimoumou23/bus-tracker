@@ -893,6 +893,112 @@ async function saveEdit(id){
 
 
 
+
+// ══ EDIT MODAL ══
+var _editId = null;
+
+function openEditModal(id){
+  var r = _records.find(function(x){ return x.id === id; });
+  if(!r) return;
+  _editId = id;
+  
+  // Build poseur options
+  var poseurOpts = (_cfg.poseurs||[]).map(function(p){
+    return '<option value="'+p+'"'+(r.poseur===p?' selected':'')+'>'+p+'</option>';
+  }).join('');
+  
+  // Build campagne options
+  var campOpts = (_cfg.camps||[]).map(function(c){
+    return '<option value="'+c+'"'+(r.campagne===c?' selected':'')+'>'+c+'</option>';
+  }).join('');
+
+  document.getElementById('editModalContent').innerHTML = `
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:6px;">N° BUS</label>
+      <input type="number" id="em_bus" value="${parseInt(r.bus||0)}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--yellow);border-radius:10px;padding:12px;color:var(--text);font-family:Inter,sans-serif;font-size:15px;outline:none;"/>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:6px;">ACTION</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <button onclick="selectEditAction('POSE',this)" class="action-edit-btn${r.action==='POSE'?' sel':''}" style="padding:10px;border-radius:10px;border:2px solid ${r.action==='POSE'?'var(--pose)':'var(--border)'};background:${r.action==='POSE'?'rgba(0,230,118,0.1)':'var(--bg)'};color:${r.action==='POSE'?'var(--pose)':'var(--muted)'};font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;cursor:pointer;">🖼️ POSE</button>
+        <button onclick="selectEditAction('DEPOSE',this)" class="action-edit-btn${r.action==='DEPOSE'?' sel':''}" style="padding:10px;border-radius:10px;border:2px solid ${r.action==='DEPOSE'?'var(--depose)':'var(--border)'};background:${r.action==='DEPOSE'?'rgba(255,102,0,0.1)':'var(--bg)'};color:${r.action==='DEPOSE'?'var(--depose)':'var(--muted)'};font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;cursor:pointer;">🗑️ DEPOSE</button>
+        <button onclick="selectEditAction('FILM',this)" class="action-edit-btn${r.action==='FILM'?' sel':''}" style="padding:10px;border-radius:10px;border:2px solid ${r.action==='FILM'?'var(--film)':'var(--border)'};background:${r.action==='FILM'?'rgba(41,121,255,0.1)':'var(--bg)'};color:${r.action==='FILM'?'var(--film)':'var(--muted)'};font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;cursor:pointer;">🛡️ FILM</button>
+      </div>
+      <input type="hidden" id="em_action" value="${r.action}"/>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:6px;">CAMPAGNE</label>
+      <select id="em_campagne" style="width:100%;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:Inter,sans-serif;font-size:14px;outline:none;">
+        ${campOpts}
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:6px;">DÉPÔT</label>
+      <input type="text" id="em_depot" value="${r.depot||''}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:Inter,sans-serif;font-size:14px;outline:none;"/>
+    </div>
+    <div style="margin-bottom:4px;">
+      <label style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;display:block;margin-bottom:6px;">POSEUR</label>
+      <select id="em_poseur" style="width:100%;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:Inter,sans-serif;font-size:14px;outline:none;">
+        ${poseurOpts}
+      </select>
+    </div>
+  `;
+
+  document.getElementById('editModal').style.display = 'block';
+}
+
+function selectEditAction(action, btn){
+  document.getElementById('em_action').value = action;
+  var colors = {POSE:'var(--pose)',DEPOSE:'var(--depose)',FILM:'var(--film)'};
+  var bgs = {POSE:'rgba(0,230,118,0.1)',DEPOSE:'rgba(255,102,0,0.1)',FILM:'rgba(41,121,255,0.1)'};
+  document.querySelectorAll('.action-edit-btn').forEach(function(b){
+    var a = b.textContent.trim().split(' ')[1];
+    b.style.border = '2px solid var(--border)';
+    b.style.background = 'var(--bg)';
+    b.style.color = 'var(--muted)';
+  });
+  btn.style.border = '2px solid '+colors[action];
+  btn.style.background = bgs[action];
+  btn.style.color = colors[action];
+}
+
+function closeEditModal(){
+  document.getElementById('editModal').style.display = 'none';
+  _editId = null;
+}
+
+async function saveEditModal(){
+  if(!_editId) return;
+  var busVal = document.getElementById('em_bus').value;
+  var action  = document.getElementById('em_action').value;
+  var campagne= document.getElementById('em_campagne').value;
+  var depot   = document.getElementById('em_depot').value;
+  var poseur  = document.getElementById('em_poseur').value;
+
+  if(!busVal){ showToast('❌ N° Bus requis'); return; }
+
+  try {
+    var newBus = String(parseInt(busVal)).padStart(3,'0');
+    // Rebuild fileName with new values
+    var r = _records.find(function(x){ return x.id === _editId; });
+    var ext = r && r.fileName ? r.fileName.split('.').pop() : 'jpg';
+    var newFileName = newBus+'_'+action+'_'+campagne+'_'+r.date+'.'+ext;
+
+    await db.collection('records').doc(_editId).update({
+      bus: newBus,
+      action: action,
+      campagne: campagne,
+      depot: depot,
+      poseur: poseur,
+      fileName: newFileName
+    });
+    closeEditModal();
+    showToast('✅ Modifié avec succès!');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
+
 // ══ EXPORT EXCEL AVEC LIENS DRIVE ══
 function buildExcelData(records){
   // Headers
@@ -1028,6 +1134,97 @@ function renderPoseurStats(){
   });
   html += '</table>';
   table.innerHTML = html;
+}
+
+
+// ══ QUICK EDIT IN ÉQUIPE ══
+function openQuickEdit(id){
+  var r = _records.find(function(x){ return x.id===id; });
+  if(!r) return;
+
+  // Remove existing modal if any
+  var old = document.getElementById('quickEditModal');
+  if(old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'quickEditModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border-radius:14px;padding:20px;width:100%;max-width:360px;border:2px solid var(--yellow);';
+
+  box.innerHTML =
+    '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;margin-bottom:16px;color:var(--yellow);">✏️ MODIFIER ENREGISTREMENT</div>' +
+
+    '<label class="lbl">N° BUS</label>' +
+    '<input type="number" id="qe-bus" value="'+parseInt(r.bus||0)+'" style="width:100%;background:var(--bg);border:1.5px solid var(--yellow);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
+
+    '<label class="lbl">ACTION</label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">' +
+      '<button class="qe-action-btn'+(r.action==='POSE'?' active':'')+'" data-val="POSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='POSE'?'var(--pose)':'var(--border)')+';background:'+(r.action==='POSE'?'rgba(0,230,118,0.15)':'var(--bg)')+';color:'+(r.action==='POSE'?'var(--pose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🖼️ POSE</button>' +
+      '<button class="qe-action-btn'+(r.action==='DEPOSE'?' active':'')+'" data-val="DEPOSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='DEPOSE'?'var(--depose)':'var(--border)')+';background:'+(r.action==='DEPOSE'?'rgba(255,102,0,0.15)':'var(--bg)')+';color:'+(r.action==='DEPOSE'?'var(--depose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🗑️ DEPOSE</button>' +
+      '<button class="qe-action-btn'+(r.action==='FILM'?' active':'')+'" data-val="FILM" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='FILM'?'var(--film)':'var(--border)')+';background:'+(r.action==='FILM'?'rgba(41,121,255,0.15)':'var(--bg)')+';color:'+(r.action==='FILM'?'var(--film)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🛡️ FILM</button>' +
+    '</div>' +
+
+    '<label class="lbl">POSEUR</label>' +
+    '<input type="text" id="qe-poseur" value="'+(r.poseur||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
+
+    '<label class="lbl">CAMPAGNE</label>' +
+    '<input type="text" id="qe-camp" value="'+(r.campagne||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none;"/>' +
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+      '<button id="qe-save-btn" data-id="'+id+'" style="padding:12px;background:var(--yellow);color:var(--gray);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">💾 SAUVER</button>' +
+      '<button onclick="closeEditModal()" style="padding:12px;background:var(--surface2);color:var(--text);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">✕ Annuler</button>' +
+    '</div>';
+
+  modal.appendChild(box);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  document.getElementById('qe-save-btn').addEventListener('click', function(){
+    saveQuickEdit(this.getAttribute('data-id'));
+  });
+  document.getElementById('qe-cancel-btn').addEventListener('click', function(){
+    document.getElementById('quickEditModal').remove();
+  });
+}
+
+function selectQeAction(btn){
+  document.querySelectorAll('.qe-action-btn').forEach(function(b){
+    b.style.border = '1.5px solid var(--border)';
+    b.style.background = 'var(--bg)';
+    b.style.color = 'var(--text)';
+  });
+  var colors = {POSE:'var(--pose)',DEPOSE:'var(--depose)',FILM:'var(--film)'};
+  var bgs = {POSE:'rgba(0,230,118,0.15)',DEPOSE:'rgba(255,102,0,0.15)',FILM:'rgba(41,121,255,0.15)'};
+  var val = btn.getAttribute('data-val');
+  btn.style.border = '1.5px solid '+colors[val];
+  btn.style.background = bgs[val];
+  btn.style.color = colors[val];
+}
+
+async function saveQuickEdit(id){
+  var busVal = document.getElementById('qe-bus').value;
+  var poseurVal = document.getElementById('qe-poseur').value;
+  var campVal = document.getElementById('qe-camp').value;
+  var activeBtn = document.querySelector('.qe-action-btn[style*="rgba"]');
+  var actionVal = activeBtn ? activeBtn.getAttribute('data-val') : null;
+
+  if(!busVal){ showToast('❌ N° Bus requis'); return; }
+  if(!actionVal){ showToast('❌ Sélectionne une action'); return; }
+
+  try {
+    await db.collection('records').doc(id).update({
+      bus: String(parseInt(busVal)).padStart(3,'0'),
+      action: actionVal,
+      poseur: poseurVal,
+      campagne: campVal
+    });
+    var m = document.getElementById('quickEditModal');
+    if(m) m.remove();
+    showToast('✅ Modifié avec succès');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
 }
 
 // ══ TABS ══
@@ -1328,18 +1525,26 @@ function renderHistory(){
   sm.textContent=records.length?`${records.length} photo(s) · POSE:${records.filter(r=>r.action==='POSE').length} DEPOSE:${records.filter(r=>r.action==='DEPOSE').length} FILM:${records.filter(r=>r.action==='FILM').length}`:'';
   const list=document.getElementById('histList');
   if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO CE JOUR</div></div>`; return; }
+  var canEdit = _currentUser && (_currentUser.role==='admin' || _currentUser.role==='chef');
+  var isAdmin = _currentUser && _currentUser.role==='admin';
   list.innerHTML=records.map(r=>`
-    <div class="hist-item">
-      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'"/>
+    <div class="hist-item" id="hitem-${r.id}">
+      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="${r.driveUrl?'cursor:pointer':''}" onclick="${r.driveUrl?`window.open('${r.driveUrl}','_blank')`:''}" />
       <div class="hist-info">
-        <div class="hist-top"><span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span><span class="hist-bus">Bus ${r.bus}</span></div>
-        <div class="hist-fname">${r.campagne}${r.depot?' · '+r.depot:''}</div>
-        <div class="hist-meta" style="color:#FDDD00">${r.poseur||'—'}</div>
-        <div class="hist-meta" style="color:#444">${r.time}</div>
+        <div class="hist-top">
+          <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
+          <span class="hist-bus">Bus ${r.bus}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:4px;">${r.time||''}</span>
+        </div>
+        <div class="hist-fname">${r.campagne||''}${r.depot?' · '+r.depot:''}</div>
+        <div class="hist-meta" style="color:#FDDD00;font-weight:600;">👷 ${r.poseur||'—'}</div>
+        <div class="hist-meta" style="font-size:10px;color:${r.driveUrl?'#4caf50':'#888'};">${r.driveUrl?'📸 Sur Drive':'📷 Local'}</div>
       </div>
       <div class="hist-actions">
-        <button class="hist-dl" onclick="downloadPhoto('${r.photoURL}','${r.fileName}')">⬇️</button>
-        ${_currentUser&&_currentUser.role==='admin' ? `<button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>` : ''}
+        ${r.driveUrl ? `<button class="hist-dl" title="Voir Drive" onclick="window.open('${r.driveUrl}','_blank')" style="color:#4285f4;">🔗</button>` : ''}
+        <button class="hist-dl" onclick="downloadPhoto('${r.photoURL||''}','${r.fileName||''}','${r.driveUrl||''}')">⬇️</button>
+        ${canEdit ? `<button class="hist-dl" style="color:var(--yellow);" onclick="openQuickEdit('${r.id}')">✏️</button>` : ''}
+        ${isAdmin ? `<button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>` : ''}
       </div>
     </div>`).join('');
 }
@@ -1595,5 +1800,20 @@ function showToast(msg){
   document.getElementById(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter'){const m={newCamp:'camp',newDepot:'depot',newPoseur:'poseur'};addItem(m[id]);} });
 });
 </script>
+
+  <!-- EDIT MODAL -->
+  <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;padding:16px;overflow-y:auto;">
+    <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:480px;margin:20px auto;border:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px;color:var(--yellow);">✏️ MODIFIER</div>
+        <button onclick="closeEditModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+      </div>
+      <div id="editModalContent"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button onclick="saveEditModal()" style="flex:1;background:var(--yellow);color:var(--gray);border:none;border-radius:10px;padding:14px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">💾 SAUVEGARDER</button>
+        <button onclick="closeEditModal()" style="background:var(--surface2);color:var(--muted);border:none;border-radius:10px;padding:14px 20px;font-family:Montserrat,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Annuler</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
