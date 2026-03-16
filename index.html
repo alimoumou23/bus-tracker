@@ -185,12 +185,20 @@ input:focus{border-color:var(--accent);}
 
 <!-- ÉQUIPE -->
 <div class="page" id="page-history">
-  <div class="hist-filters">
-    <button class="filter-btn active" onclick="filterHist('ALL',this)">TOUT</button>
-    <button class="filter-btn" onclick="filterHist('POSE',this)">🖼️ POSE</button>
-    <button class="filter-btn" onclick="filterHist('DEPOSE',this)">🗑️ DEPOSE</button>
-    <button class="filter-btn" onclick="filterHist('FILM',this)">🛡️ FILM</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+    <button onclick="changeDate(-1)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:16px;">&#8249;</button>
+    <div id="dateDisplay" style="flex:1;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;letter-spacing:1px;cursor:pointer;" onclick="pickDate()"></div>
+    <button onclick="changeDate(1)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:16px;">&#8250;</button>
   </div>
+  <input type="date" id="datePicker" style="display:none" onchange="onDatePick(this.value)"/>
+  <div class="hist-filters" style="margin-bottom:8px;" id="actionFilters">
+    <button class="filter-btn active" onclick="setHistFilter('action','ALL',this)">TOUT</button>
+    <button class="filter-btn" onclick="setHistFilter('action','POSE',this)">POSE</button>
+    <button class="filter-btn" onclick="setHistFilter('action','DEPOSE',this)">DEPOSE</button>
+    <button class="filter-btn" onclick="setHistFilter('action','FILM',this)">FILM</button>
+  </div>
+  <div class="hist-filters" id="poseurFilters" style="margin-bottom:10px;"></div>
+  <div id="histSummary" style="font-size:11px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;text-align:right;"></div>
   <div id="histList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
 </div>
 
@@ -292,7 +300,7 @@ function showTab(tab, el){
   document.getElementById('page-'+tab).classList.add('active');
   el.classList.add('active');
   closeAllDropdowns();
-  if(tab==='history') renderHistory();
+  if(tab==='history') initHistoryTab();
   if(tab==='export') renderStats();
   if(tab==='settings') renderSettings();
 }
@@ -498,17 +506,80 @@ function resetCapture(){
 }
 
 // ══ HISTORY ══
-function filterHist(f,el){
-  _state.filter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+let _histFilter = { action:'ALL', poseur:'ALL', date: getTodayStr() };
+
+function getTodayStr(){
+  const d=new Date();
+  return [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');
+}
+
+function initHistoryTab(){
+  _histFilter.date = getTodayStr();
+  updateDateDisplay();
+  renderPoseurFilters();
+  renderHistory();
+}
+
+function updateDateDisplay(){
+  document.getElementById('dateDisplay').textContent = '📅 ' + _histFilter.date;
+}
+
+function changeDate(dir){
+  const parts = _histFilter.date.split('-');
+  const d = new Date(parts[2], parts[1]-1, parts[0]);
+  d.setDate(d.getDate() + dir);
+  _histFilter.date = [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');
+  updateDateDisplay();
+  renderHistory();
+}
+
+function pickDate(){
+  const picker = document.getElementById('datePicker');
+  picker.click();
+}
+
+function onDatePick(val){
+  if(!val) return;
+  const [y,m,d] = val.split('-');
+  _histFilter.date = [d,m,y].join('-');
+  updateDateDisplay();
+  renderHistory();
+}
+
+function setHistFilter(type, val, el){
+  _histFilter[type] = val;
+  const container = type==='action' ? document.getElementById('actionFilters') : document.getElementById('poseurFilters');
+  container.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   renderHistory();
 }
 
+function renderPoseurFilters(){
+  const poseurs = [...new Set(_records.map(r=>r.poseur).filter(Boolean))];
+  const wrap = document.getElementById('poseurFilters');
+  if(!poseurs.length){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = ['ALL',...poseurs].map(p=>
+    `<button class="filter-btn${p===_histFilter.poseur||(_histFilter.poseur==='ALL'&&p==='ALL')?' active':''}" onclick="setHistFilter('poseur','${p}',this)">${p==='ALL'?'👥 TOUS':p}</button>`
+  ).join('');
+}
+
 function renderHistory(){
+  renderPoseurFilters();
   const list = document.getElementById('histList');
-  const records = _state.filter==='ALL' ? _records : _records.filter(r=>r.action===_state.filter);
-  if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO</div></div>`; return; }
+  let records = _records.filter(r => r.date === _histFilter.date);
+  if(_histFilter.action !== 'ALL') records = records.filter(r=>r.action===_histFilter.action);
+  if(_histFilter.poseur !== 'ALL') records = records.filter(r=>r.poseur===_histFilter.poseur);
+  
+  // Summary
+  const summary = document.getElementById('histSummary');
+  if(summary){
+    const pose=records.filter(r=>r.action==='POSE').length;
+    const depose=records.filter(r=>r.action==='DEPOSE').length;
+    const film=records.filter(r=>r.action==='FILM').length;
+    summary.textContent = records.length ? `${records.length} photo(s) · POSE:${pose} DEPOSE:${depose} FILM:${film}` : '';
+  }
+
+  if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO CE JOUR</div></div>`; return; }
   list.innerHTML = records.map(r=>`
     <div class="hist-item">
       <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'"/>
@@ -517,9 +588,9 @@ function renderHistory(){
           <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
           <span class="hist-bus">Bus ${r.bus}</span>
         </div>
-        <div class="hist-fname">${r.fileName}</div>
-        <div class="hist-meta">${r.campagne}${r.depot?' · '+r.depot:''}${r.poseur?' · '+r.poseur:''}</div>
-        <div class="hist-meta" style="color:#444">${r.date} ${r.time}</div>
+        <div class="hist-fname">${r.campagne}${r.depot?' · '+r.depot:''}</div>
+        <div class="hist-meta" style="color:var(--accent)">${r.poseur||'—'}</div>
+        <div class="hist-meta" style="color:#444">${r.time}</div>
       </div>
       <div class="hist-actions">
         <button class="hist-dl" onclick="downloadPhoto('${r.photoURL}','${r.fileName}')">⬇️</button>
