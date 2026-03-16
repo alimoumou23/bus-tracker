@@ -481,18 +481,18 @@ body.lang-ar .lbl { letter-spacing: 0; }
   <!-- CAPTURE -->
   <div class="page active" id="page-capture">
     <div class="card">
-      <div class="card-title">INFORMATIONS</div>
+      <div class="card-title" data-i18n="informations">INFORMATIONS</div>
       <div class="field">
-        <label class="lbl">N° BUS</label>
+        <label class="lbl" data-i18n="nbus">N° BUS</label>
         <input type="number" id="busNum" placeholder="Ex: 42000" maxlength="5" oninput="validateBus(this);updatePreview()"/>
       <span id="busHint" style="font-size:11px;margin-top:4px;display:block;height:14px;font-family:Montserrat,sans-serif;padding-left:4px;"></span>
       </div>
-      <div class="field"><label class="lbl">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
+      <div class="field"><label class="lbl" data-i18n="campagne">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
       <div class="field">
-        <label class="lbl">DÉPÔT</label>
+        <label class="lbl" data-i18n="depot">DÉPÔT</label>
         <div class="depot-grid" id="depotBtns"></div>
       </div>
-      <div class="field" id="poseurField"><label class="lbl">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
+      <div class="field" id="poseurField"><label class="lbl" data-i18n="poseur">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
     </div>
     <div class="card">
       <div class="card-title">ACTION</div>
@@ -508,7 +508,7 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <div id="photoArea">
         <label for="fileInput" class="photo-label">
           <span class="ph-icon">📷</span>
-          <span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
+          <span class="ph-text" data-i18n="prendre">PRENDRE / CHOISIR PHOTO</span>
         </label>
       </div>
     </div>
@@ -1261,20 +1261,20 @@ function openQuickEdit(id){
   box.innerHTML =
     '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;margin-bottom:16px;color:var(--yellow);">✏️ MODIFIER ENREGISTREMENT</div>' +
 
-    '<label class="lbl">N° BUS</label>' +
+    '<label class="lbl" data-i18n="nbus">N° BUS</label>' +
     '<input type="number" id="qe-bus" value="'+parseInt(r.bus||0)+'" style="width:100%;background:var(--bg);border:1.5px solid var(--yellow);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
 
-    '<label class="lbl">ACTION</label>' +
+    '<label class="lbl" data-i18n="action">ACTION</label>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">' +
       '<button class="qe-action-btn'+(r.action==='POSE'?' active':'')+'" data-val="POSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='POSE'?'var(--pose)':'var(--border)')+';background:'+(r.action==='POSE'?'rgba(0,230,118,0.15)':'var(--bg)')+';color:'+(r.action==='POSE'?'var(--pose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🖼️ POSE</button>' +
       '<button class="qe-action-btn'+(r.action==='DEPOSE'?' active':'')+'" data-val="DEPOSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='DEPOSE'?'var(--depose)':'var(--border)')+';background:'+(r.action==='DEPOSE'?'rgba(255,102,0,0.15)':'var(--bg)')+';color:'+(r.action==='DEPOSE'?'var(--depose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🗑️ DEPOSE</button>' +
       '<button class="qe-action-btn'+(r.action==='FILM'?' active':'')+'" data-val="FILM" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='FILM'?'var(--film)':'var(--border)')+';background:'+(r.action==='FILM'?'rgba(41,121,255,0.15)':'var(--bg)')+';color:'+(r.action==='FILM'?'var(--film)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🛡️ FILM</button>' +
     '</div>' +
 
-    '<label class="lbl">POSEUR</label>' +
+    '<label class="lbl" data-i18n="poseur">POSEUR</label>' +
     '<input type="text" id="qe-poseur" value="'+(r.poseur||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
 
-    '<label class="lbl">CAMPAGNE</label>' +
+    '<label class="lbl" data-i18n="campagne">CAMPAGNE</label>' +
     '<input type="text" id="qe-camp" value="'+(r.campagne||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none;"/>' +
 
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
@@ -1407,10 +1407,12 @@ function toggleLang(){
 }
 
 function applyTranslations(){
-  // Tabs
-  var tabs = document.querySelectorAll('.tab .tab-label');
-  var tabKeys = ['capture','equipe','gestion','rapport','config'];
-  tabs.forEach(function(el,i){ if(tabKeys[i]) el.textContent = t(tabKeys[i]).replace(/^[^ ]+ /,''); });
+  // Translate ALL elements with data-i18n (CAPTURE + EQUIPE only via HTML targeting)
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key = el.getAttribute('data-i18n');
+    var val = t(key);
+    if(val) el.textContent = val;
+  });
 
   // Login page
   var loginTitle = document.querySelector('.login-title');
@@ -1422,44 +1424,22 @@ function applyTranslations(){
   var loginBtn = document.querySelector('.login-btn');
   if(loginBtn) loginBtn.textContent = t('connexion');
 
-  // Update select placeholders
+  // Dropdown placeholders (rebuilt by buildAllDropdowns)
   var campSel = document.getElementById('campagneSelect');
   if(campSel && campSel.options[0]) campSel.options[0].text = t('sel_campagne');
   var poseurSel = document.getElementById('poseurSelect');
   if(poseurSel && poseurSel.options[0]) poseurSel.options[0].text = t('sel_poseur');
 
-  // Capture labels
-  var labels = document.querySelectorAll('.lbl');
-  var labelMap = {
-    'N° BUS': 'nbus', 'CAMPAGNE': 'campagne', 'DÉPÔT': 'depot',
-    'POSEUR': 'poseur', 'ACTION': 'action', 'PHOTO': 'photo',
-    'NOM DU FICHIER': 'nom_fichier', 'INFORMATIONS': 'informations'
-  };
-  labels.forEach(function(el){
-    var key = labelMap[el.textContent.trim()];
-    if(key) el.textContent = t(key);
-  });
-
-  // Action buttons text
-  var actionLabels = document.querySelectorAll('.action-label');
-  actionLabels.forEach(function(el){
-    if(el.textContent.trim() === 'POSE' || el.textContent.trim() === 'تركيب') el.textContent = t('pose');
-    if(el.textContent.trim() === 'DEPOSE' || el.textContent.trim() === 'فك') el.textContent = t('depose');
-    if(el.textContent.trim() === 'FILM' || el.textContent.trim() === 'فيلم') el.textContent = t('film');
-  });
-
-  // Empty state
+  // EQUIPE empty state (dynamic)
   document.querySelectorAll('.empty-text').forEach(function(el){
-    if(el.textContent.includes('PHOTO') || el.textContent.includes('صور')) el.textContent = t('aucune');
+    el.textContent = t('aucune');
   });
 
-  // Capture button
-  var dlBtn = document.getElementById('dlBtn');
-  if(dlBtn && !dlBtn.disabled) dlBtn.textContent = t('enregistrer');
-
-  // Photo zone placeholder
-  var photoPlaceholder = document.querySelector('.photo-placeholder-text');
-  if(photoPlaceholder) photoPlaceholder.textContent = t('prendre');
+  // EQUIPE action filter buttons
+  document.querySelectorAll('#actionFilters .filter-btn').forEach(function(btn){
+    var txt = btn.textContent.trim();
+    if(txt === 'TOUT' || txt === 'الكل') btn.textContent = t('tout');
+  });
 }
 
 // ══ TABS ══
@@ -1596,7 +1576,7 @@ function handleFile(input){
 }
 function changePhoto(){
   _state.file=null; _state.fileURL=null;
-  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text">PRENDRE / CHOISIR PHOTO</span></label>`;
+  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text" data-i18n="prendre">PRENDRE / CHOISIR PHOTO</span></label>`;
   document.getElementById('fileInput').value='';
   updatePreview();
 }
@@ -1739,7 +1719,7 @@ function resetCapture(){
   _state.file=null; _state.fileURL=null; _state.action='POSE';
   document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.act-btn.pose').classList.add('active');
-  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text">PRENDRE / CHOISIR PHOTO</span></label>`;
+  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text" data-i18n="prendre">PRENDRE / CHOISIR PHOTO</span></label>`;
   document.getElementById('fileInput').value='';
   document.getElementById('fnameBox').style.display='none';
   document.getElementById('btnArea').innerHTML=`<button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📥 ENREGISTRER LA PHOTO</button>`;
