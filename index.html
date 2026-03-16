@@ -410,7 +410,7 @@ body.light .depot-btn.active{color:var(--gray);}
       <div class="progress-text" id="progressText">Upload en cours...</div>
     </div>
     <div id="btnArea">
-      <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📤 ENVOYER LA PHOTO</button>
+      <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📥 ENREGISTRER LA PHOTO</button>
     </div>
   </div>
 
@@ -873,27 +873,59 @@ function updatePreview(){
 async function doCapture(){
   const fn=buildFileName(); if(!fn) return;
   const btn=document.getElementById('dlBtn');
-  btn.disabled=true; btn.textContent='⏳ Upload...';
+  btn.disabled=true; btn.textContent='⏳ Enregistrement...';
   document.getElementById('progressWrap').style.display='block';
-  const storageRef=storage.ref('photos/'+Date.now()+'_'+fn);
-  const task=storageRef.put(_state.file);
-  task.on('state_changed',
-    snap=>{ const p=Math.round(snap.bytesTransferred/snap.totalBytes*100); document.getElementById('progressFill').style.width=p+'%'; document.getElementById('progressText').textContent='Upload '+p+'%'; },
-    err=>{ showToast('❌ Erreur upload'); btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO'; document.getElementById('progressWrap').style.display='none'; },
-    async()=>{
-      const photoURL=await task.snapshot.ref.getDownloadURL();
-      await db.collection('records').add({
-        bus:pad(document.getElementById('busNum').value.trim()),
-        action:_state.action,campagne:_sdValues.campagne,
-        depot:_sdValues.depot,poseur:_sdValues.poseur,
-        fileName:fn,photoURL,storagePath:task.snapshot.ref.fullPath,
-        date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
-      });
-      document.getElementById('progressWrap').style.display='none';
-      showToast('✅ Photo envoyée !');
-      resetCapture();
-    }
-  );
+  document.getElementById('progressFill').style.width='60%';
+  document.getElementById('progressText').textContent='Enregistrement...';
+
+  try {
+    // 1. Download photo locally with correct name
+    const a=document.createElement('a');
+    a.href=_state.fileURL;
+    a.download=fn;
+    a.click();
+
+    // 2. Convert image to base64 thumbnail for preview
+    var thumb = await toThumb(_state.file);
+
+    // 3. Save record to Firestore (no Storage needed)
+    await db.collection('records').add({
+      bus:pad(document.getElementById('busNum').value.trim()),
+      action:_state.action,campagne:_sdValues.campagne,
+      depot:_sdValues.depot,poseur:_sdValues.poseur,
+      fileName:fn,photoURL:thumb,storagePath:'',
+      date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
+    });
+
+    document.getElementById('progressFill').style.width='100%';
+    document.getElementById('progressWrap').style.display='none';
+    showToast('✅ Photo sauvegardée !');
+    resetCapture();
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+    btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO';
+    document.getElementById('progressWrap').style.display='none';
+  }
+}
+
+function toThumb(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        var max = 200;
+        var w = img.width, h = img.height;
+        if(w > h){ if(w>max){h=h*max/w;w=max;} } else { if(h>max){w=w*max/h;h=max;} }
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.6));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 function resetCapture(){
   document.getElementById('busNum').value='';
@@ -904,7 +936,7 @@ function resetCapture(){
   document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text">PRENDRE / CHOISIR PHOTO</span></label>`;
   document.getElementById('fileInput').value='';
   document.getElementById('fnameBox').style.display='none';
-  document.getElementById('btnArea').innerHTML=`<button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📤 ENVOYER LA PHOTO</button>`;
+  document.getElementById('btnArea').innerHTML=`<button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📥 ENREGISTRER LA PHOTO</button>`;
   buildAllDropdowns();
 }
 
