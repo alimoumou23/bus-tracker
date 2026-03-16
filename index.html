@@ -495,15 +495,15 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <div class="field" id="poseurField"><label class="lbl" data-i18n="poseur">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
     </div>
     <div class="card">
-      <div class="card-title">ACTION</div>
+      <div class="card-title" data-i18n="action">ACTION</div>
       <div class="actions-grid">
-        <button class="act-btn pose active" onclick="setAction('POSE')"><span class="act-icon">🖼️</span>POSE<br/><span style="font-size:9px">Habillage</span></button>
-        <button class="act-btn depose" onclick="setAction('DEPOSE')"><span class="act-icon">🗑️</span>DEPOSE<br/><span style="font-size:9px">Habillage</span></button>
-        <button class="act-btn film" onclick="setAction('FILM')"><span class="act-icon">🛡️</span>FILM<br/><span style="font-size:9px">Protection</span></button>
+        <button class="act-btn pose active" onclick="setAction('POSE')"><span class="act-icon">🖼️</span><span data-i18n="pose">POSE</span><br/><span style="font-size:9px" data-i18n="habillage">Habillage</span></button>
+        <button class="act-btn depose" onclick="setAction('DEPOSE')"><span class="act-icon">🗑️</span><span data-i18n="depose">DEPOSE</span><br/><span style="font-size:9px" data-i18n="habillage">Habillage</span></button>
+        <button class="act-btn film" onclick="setAction('FILM')"><span class="act-icon">🛡️</span><span data-i18n="film">FILM</span><br/><span style="font-size:9px" data-i18n="protection">Protection</span></button>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">PHOTO</div>
+      <div class="card-title" data-i18n="photo">PHOTO</div>
       <input type="file" accept="image/*" capture="environment" id="fileInput" style="display:none" onchange="handleFile(this)"/>
       <div id="photoArea">
         <label for="fileInput" class="photo-label">
@@ -1338,7 +1338,7 @@ var _lang = 'fr';
 
 var _t = {
   fr: {
-    capture: '📷 CAPTURE', equipe: '👥 ÉQUIPE', gestion: '✏️ GESTION',
+    capture: '📷 VALIDATION', equipe: '👥 ÉQUIPE', gestion: '✏️ GESTION',
     rapport: '📊 RAPPORT', config: '⚙️ CONFIG',
     nbus: 'N° BUS', campagne: 'CAMPAGNE', depot: 'DÉPÔT', poseur: 'POSEUR',
     action: 'ACTION', photo: 'PHOTO',
@@ -1364,12 +1364,12 @@ var _t = {
     nom_fichier: 'NOM DU FICHIER',
   },
   ar: {
-    capture: '📷 التقاط', equipe: '👥 الفريق', gestion: '✏️ إدارة',
+    capture: '📷 تحقق', equipe: '👥 الفريق', gestion: '✏️ إدارة',
     rapport: '📊 تقرير', config: '⚙️ إعداد',
     nbus: 'رقم الحافلة', campagne: 'الحملة', depot: 'المستودع', poseur: 'المثبت',
     action: 'العملية', photo: 'الصورة',
-    pose: 'تركيب', depose: 'فك', film: 'فيلم',
-    habillage: 'لباس', protection: 'حماية',
+    pose: 'تركيب', depose: 'فك', film: 'فيلم واق',
+    habillage: 'تلبيس', protection: 'حماية', action_card: 'العملية',
     sel_campagne: '— اختر الحملة —',
     sel_poseur: '— اختر المثبت —',
     enregistrer: '📥 حفظ الصورة',
