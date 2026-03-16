@@ -321,7 +321,7 @@ input:focus{border-color:var(--yellow);}
   display:flex;align-items:center;
   padding:0 5px;box-sizing:border-box;
 }
-body.light-mode .theme-toggle-track{background:#FDDD00;}
+body.light .theme-toggle-track{background:#FDDD00;}
 .theme-toggle-thumb{
   position:absolute;
   width:20px;height:20px;
@@ -333,7 +333,7 @@ body.light-mode .theme-toggle-track{background:#FDDD00;}
   display:flex;align-items:center;justify-content:center;
   font-size:11px;
 }
-body.light-mode .theme-toggle-thumb{left:29px;}
+body.light .theme-toggle-thumb{left:29px;}
 
 /* LIGHT THEME */
 body.light{
@@ -1515,12 +1515,17 @@ function selectDepot(d){
 // ══ THEME ══
 function toggleTheme(){
   var isLight = document.body.classList.toggle('light');
-  document.getElementById('themeBtn').textContent = isLight ? '🌙' : '☀️';
+  var thumb = document.getElementById('themeThumb');
+  if(thumb) thumb.textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
 }
 function loadTheme(){
   var t = localStorage.getItem('theme');
-  if(t==='light'){ document.body.classList.add('light'); document.getElementById('themeBtn').textContent='🌙'; }
+  if(t==='light'){
+    document.body.classList.add('light');
+    var thumb = document.getElementById('themeThumb');
+    if(thumb) thumb.textContent = '☀️';
+  }
 }
 
 // ══ ACTION ══
