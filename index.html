@@ -971,10 +971,10 @@ function busLookup(){
     return;
   }
 
-  // Sort oldest → newest
-  records.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+  // Sort newest → oldest (last sent = top, first sent = bottom)
+  records.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
 
-  var last = records[records.length-1];
+  var last = records[0]; // Most recent is now first
   var actionColor = last.action==='POSE'?'var(--pose)':last.action==='DEPOSE'?'var(--depose)':'var(--film)';
   var poses   = records.filter(function(r){return r.action==='POSE';}).length;
   var deposes = records.filter(function(r){return r.action==='DEPOSE';}).length;
@@ -1003,7 +1003,7 @@ function busLookup(){
   records.forEach(function(r, i){
     var ac = r.action==='POSE'?'var(--pose)':r.action==='DEPOSE'?'var(--depose)':'var(--film)';
     var icon = r.action==='POSE'?'🖼️':r.action==='DEPOSE'?'🗑️':'🛡️';
-    var isLast = i === records.length-1;
+    var isLast = i === 0; // First in sorted array = most recent
     var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
     var hasThumb = r.photoURL && r.photoURL.startsWith('data:');
 
@@ -1030,8 +1030,12 @@ function busLookup(){
     html += '<div style="display:flex;gap:10px;align-items:flex-start;">';
 
     // Left: photo - use Drive thumbnail if we have fileId
-    var fileId = r.driveUrl ? r.driveUrl.match(/\/d\/([^/]+)\//) : null;
-    fileId = fileId ? fileId[1] : null;
+    var fileId = null;
+    if(r.driveUrl){
+      var m = r.driveUrl.match(/[?&]id=([^&]+)/);
+      if(!m) m = r.driveUrl.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+      fileId = m ? m[1] : null;
+    }
     var driveThumbnail = fileId ? 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w200' : '';
     var displaySrc = driveThumbnail || thumbSrc;
     var fullViewUrl = driveLink || (thumbSrc ? thumbSrc : '');
