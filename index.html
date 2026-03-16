@@ -8,12 +8,17 @@
 <meta name="theme-color" content="#0a0a0a"/>
 <title>BusTrack Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<!-- Firebase Compat -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
 <style>
 :root{--bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--border:#2a2a2a;--text:#f0f0f0;--muted:#666;--pose:#00e676;--depose:#ff6d00;--film:#2979ff;--accent:#ff6d00;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overscroll-behavior:none;}
 .header{background:var(--surface);border-bottom:3px solid var(--accent);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.header-left{display:flex;align-items:center;gap:10px;}
 .header-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);letter-spacing:2px;line-height:1;}
 .header-sub{font-size:9px;color:var(--muted);letter-spacing:3px;margin-top:2px;}
 .header-count{background:var(--accent);color:#fff;font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;letter-spacing:1px;}
@@ -31,7 +36,7 @@ input[type=text],input[type=number]{width:100%;background:var(--bg);border:1px s
 input[type=number]{font-size:22px;font-weight:500;}
 input:focus{border-color:var(--accent);}
 .sd-wrap{position:relative;}
-.sd-display{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 40px 12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:border-color 0.2s;min-height:46px;}
+.sd-display{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 40px 12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;cursor:pointer;display:flex;align-items:center;min-height:46px;transition:border-color 0.2s;}
 .sd-display.open{border-color:var(--accent);}
 .sd-display-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sd-display.empty-val .sd-display-text{color:var(--muted);}
@@ -56,8 +61,8 @@ input:focus{border-color:var(--accent);}
 .act-btn.film.active{border-color:var(--film);background:rgba(41,121,255,0.08);color:var(--film);}
 .photo-label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);border:2px dashed var(--border);border-radius:10px;padding:28px 20px;cursor:pointer;transition:border-color 0.2s;}
 .photo-label:hover{border-color:var(--accent);}
-.photo-label .ph-icon{font-size:36px;}
-.photo-label .ph-text{font-size:11px;color:var(--muted);letter-spacing:2px;}
+.ph-icon{font-size:36px;}
+.ph-text{font-size:11px;color:var(--muted);letter-spacing:2px;}
 .preview-wrap{position:relative;}
 .preview-img{width:100%;border-radius:10px;max-height:200px;object-fit:cover;display:block;}
 .change-photo{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;}
@@ -83,7 +88,7 @@ input:focus{border-color:var(--accent);}
 .hist-badge.film{background:rgba(41,121,255,0.15);color:var(--film);}
 .hist-bus{font-size:13px;font-weight:500;}
 .hist-fname{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.hist-meta{font-size:10px;color:var(--muted);margin-top:4px;}
+.hist-meta{font-size:10px;color:var(--muted);margin-top:2px;}
 .hist-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
 .hist-dl{background:var(--surface2);border:none;color:var(--text);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
 .hist-del{background:transparent;border:none;color:#555;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
@@ -107,18 +112,10 @@ input:focus{border-color:var(--accent);}
 .add-tag-row{display:flex;gap:8px;margin-top:10px;}
 .add-tag-row input{flex:1;}
 .add-tag-btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px 16px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;}
-.success-wrap{text-align:center;padding:20px 0;}
-.success-icon{font-size:52px;margin-bottom:12px;}
-.success-msg{font-size:13px;letter-spacing:2px;margin-bottom:6px;}
-.success-fname{font-size:11px;color:var(--muted);margin-bottom:20px;word-break:break-all;padding:0 10px;}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:20px;font-size:12px;letter-spacing:1px;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
 .toast.show{opacity:1;}
 .loader{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);font-size:12px;letter-spacing:1px;gap:10px;}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--pose);animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--pose);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .page.active{animation:fadeIn 0.25s ease;}
 </style>
@@ -126,21 +123,19 @@ input:focus{border-color:var(--accent);}
 <body>
 
 <div class="header">
-  <div class="header-left">
-    <div>
-      <div class="header-logo">🚌 BusTrack</div>
-      <div class="header-sub">GESTION AFFICHAGE</div>
-    </div>
+  <div>
+    <div class="header-logo">🚌 BusTrack</div>
+    <div class="header-sub">GESTION AFFICHAGE</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <div class="sync-dot" id="syncDot" style="opacity:0"></div>
+    <div class="sync-dot" id="syncDot" style="opacity:0;transition:opacity 0.3s"></div>
     <div class="header-count" id="totalCount">0 photos</div>
   </div>
 </div>
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('capture',this)">📷 CAPTURE</div>
-  <div class="tab" onclick="showTab('history',this)">📋 ÉQUIPE</div>
+  <div class="tab" onclick="showTab('history',this)">👥 ÉQUIPE</div>
   <div class="tab" onclick="showTab('export',this)">📊 RAPPORT</div>
   <div class="tab" onclick="showTab('settings',this)">⚙️ CONFIG</div>
 </div>
@@ -153,20 +148,10 @@ input:focus{border-color:var(--accent);}
       <label class="lbl">N° BUS</label>
       <input type="number" id="busNum" placeholder="Ex: 42" oninput="updatePreview()"/>
     </div>
-    <div class="field">
-      <label class="lbl">CAMPAGNE</label>
-      <div class="sd-wrap" id="sd-campagne"></div>
-    </div>
-    <div class="field">
-      <label class="lbl">DÉPÔT</label>
-      <div class="sd-wrap" id="sd-depot"></div>
-    </div>
-    <div class="field">
-      <label class="lbl">POSEUR</label>
-      <div class="sd-wrap" id="sd-poseur"></div>
-    </div>
+    <div class="field"><label class="lbl">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
+    <div class="field"><label class="lbl">DÉPÔT</label><div class="sd-wrap" id="sd-depot"></div></div>
+    <div class="field"><label class="lbl">POSEUR</label><div class="sd-wrap" id="sd-poseur"></div></div>
   </div>
-
   <div class="card">
     <div class="card-title">ACTION</div>
     <div class="actions-grid">
@@ -175,7 +160,6 @@ input:focus{border-color:var(--accent);}
       <button class="act-btn film" onclick="setAction('FILM')"><span class="act-icon">🛡️</span>FILM<br/><span style="font-size:9px">Protection</span></button>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">PHOTO</div>
     <input type="file" accept="image/*" capture="environment" id="fileInput" style="display:none" onchange="handleFile(this)"/>
@@ -186,23 +170,20 @@ input:focus{border-color:var(--accent);}
       </label>
     </div>
   </div>
-
   <div class="fname-box" id="fnameBox" style="display:none">
     <div class="fname-lbl">NOM DU FICHIER</div>
     <div class="fname-val" id="fnameVal"></div>
   </div>
-
   <div class="progress-wrap" id="progressWrap" style="display:none">
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div class="progress-text" id="progressText">Upload en cours...</div>
   </div>
-
   <div id="btnArea">
     <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📤 ENVOYER LA PHOTO</button>
   </div>
 </div>
 
-<!-- HISTORY (ÉQUIPE) -->
+<!-- ÉQUIPE -->
 <div class="page" id="page-history">
   <div class="hist-filters">
     <button class="filter-btn active" onclick="filterHist('ALL',this)">TOUT</button>
@@ -210,10 +191,10 @@ input:focus{border-color:var(--accent);}
     <button class="filter-btn" onclick="filterHist('DEPOSE',this)">🗑️ DEPOSE</button>
     <button class="filter-btn" onclick="filterHist('FILM',this)">🛡️ FILM</button>
   </div>
-  <div id="histList"><div class="loader"><div class="sync-dot"></div> Chargement...</div></div>
+  <div id="histList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
 </div>
 
-<!-- EXPORT -->
+<!-- RAPPORT -->
 <div class="page" id="page-export">
   <div class="stats-grid">
     <div class="stat-box pose"><div class="stat-num" id="statPose">0</div><div class="stat-lbl">POSE</div></div>
@@ -227,7 +208,7 @@ input:focus{border-color:var(--accent);}
   </div>
 </div>
 
-<!-- SETTINGS -->
+<!-- CONFIG -->
 <div class="page" id="page-settings">
   <div class="card">
     <div class="card-title">CAMPAGNES</div>
@@ -257,12 +238,8 @@ input:focus{border-color:var(--accent);}
 
 <div class="toast" id="toast"></div>
 
-<!-- FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
+<script>
+// ══ FIREBASE INIT ══
 const firebaseConfig = {
   apiKey: "AIzaSyDF-tmpN-rZwlVsLCHcQVcXxWvKZFDn22c",
   authDomain: "alsa-bus-2ec91.firebaseapp.com",
@@ -271,51 +248,45 @@ const firebaseConfig = {
   messagingSenderId: "456087602293",
   appId: "1:456087602293:web:7e68499122b412a3f5a43c"
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
 
 // ══ STATE ══
-window._state = { action:'POSE', file:null, fileURL:null, filter:'ALL' };
-window._db = { camps:[], depots:['Maarif','Sidi Barnousi','Madiouna','Bane Msik'], poseurs:[] };
-window._records = [];
-window._sdValues = { campagne:'', depot:'', poseur:'' };
+let _state = { action:'POSE', file:null, fileURL:null, filter:'ALL' };
+let _cfg = { camps:[], depots:['Maarif','Sidi Barnousi','Madiouna','Bane Msik'], poseurs:[] };
+let _records = [];
+let _sdValues = { campagne:'', depot:'', poseur:'' };
 
 // ══ INIT ══
 async function init(){
-  // Load config from Firestore
   try {
-    const cfgDoc = await getDoc(doc(db,'config','main'));
-    if(cfgDoc.exists()){
+    const cfgDoc = await db.collection('config').doc('main').get();
+    if(cfgDoc.exists){
       const d = cfgDoc.data();
-      if(d.camps) window._db.camps = d.camps;
-      if(d.depots) window._db.depots = d.depots;
-      if(d.poseurs) window._db.poseurs = d.poseurs;
+      if(d.camps) _cfg.camps = d.camps;
+      if(d.depots) _cfg.depots = d.depots;
+      if(d.poseurs) _cfg.poseurs = d.poseurs;
     }
   } catch(e){}
   buildAllDropdowns();
 
-  // Real-time listener for records
-  const q = query(collection(db,'records'), orderBy('timestamp','desc'));
-  onSnapshot(q, (snapshot) => {
-    window._records = [];
-    snapshot.forEach(d => window._records.push({id:d.id, ...d.data()}));
+  // Real-time listener
+  db.collection('records').orderBy('timestamp','desc').onSnapshot(snapshot => {
+    _records = [];
+    snapshot.forEach(d => _records.push({id:d.id, ...d.data()}));
     updateHeaderCount();
     if(document.getElementById('page-history').classList.contains('active')) renderHistory();
     if(document.getElementById('page-export').classList.contains('active')) renderStats();
   });
 }
 
-// ══ SAVE CONFIG ══
 async function saveConfig(){
-  try {
-    await setDoc(doc(db,'config','main'), window._db);
-  } catch(e){ showToast('Erreur sauvegarde config'); }
+  try { await db.collection('config').doc('main').set(_cfg); } catch(e){}
 }
 
 // ══ TABS ══
-window.showTab = function(tab, el){
+function showTab(tab, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
@@ -324,12 +295,12 @@ window.showTab = function(tab, el){
   if(tab==='history') renderHistory();
   if(tab==='export') renderStats();
   if(tab==='settings') renderSettings();
-};
+}
 
 // ══ SEARCHABLE DROPDOWN ══
-window.buildDropdown = function(containerId, key, items, placeholder){
+function buildDropdown(containerId, key, items, placeholder){
   const wrap = document.getElementById(containerId);
-  const val = window._sdValues[key];
+  const val = _sdValues[key];
   wrap.innerHTML = `
     <div class="sd-display ${val?'has-val':'empty-val'}" id="sd-btn-${key}" onclick="toggleDropdown('${key}')">
       <span class="sd-display-text">${val||placeholder}</span>
@@ -339,30 +310,24 @@ window.buildDropdown = function(containerId, key, items, placeholder){
       <div class="sd-search">
         <input type="text" placeholder="Rechercher..." id="sd-search-${key}" oninput="filterDropdown('${key}')" onclick="event.stopPropagation()"/>
       </div>
-      <div class="sd-list" id="sd-list-${key}">
-        ${renderDropdownItems(key, items, '')}
-      </div>
+      <div class="sd-list" id="sd-list-${key}">${renderDropdownItems(key,items,'')}</div>
     </div>`;
-};
+}
 
-function renderDropdownItems(key, items, query){
-  const filtered = query ? items.filter(i=>i.toLowerCase().includes(query.toLowerCase())) : items;
+function renderDropdownItems(key, items, q){
+  const filtered = q ? items.filter(i=>i.toLowerCase().includes(q.toLowerCase())) : items;
   let html = '';
-  if(!filtered.length && !query){
-    html += `<div class="sd-empty">Aucun — ajoutez depuis CONFIG</div>`;
-  } else if(!filtered.length){
-    html += `<div class="sd-empty">Aucun résultat</div>`;
-  } else {
-    filtered.forEach(item=>{
-      html += `<div class="sd-item${window._sdValues[key]===item?' selected':''}" onclick="selectDropdown('${key}','${item.replace(/'/g,"\\'")}')">${item}${window._sdValues[key]===item?' ✓':''}</div>`;
-    });
-  }
-  const labelMap = {campagne:'campagne',depot:'dépôt',poseur:'poseur'};
-  html += `<div class="sd-item add-new" onclick="addNewFromDropdown('${key}','${(query||'').replace(/'/g,"\\'")}')">➕ ${query?'Ajouter "'+query+'"':'Ajouter '+labelMap[key]+'...'}</div>`;
+  if(!filtered.length && !q) html += `<div class="sd-empty">Aucun — ajoutez depuis CONFIG</div>`;
+  else if(!filtered.length) html += `<div class="sd-empty">Aucun résultat</div>`;
+  else filtered.forEach(item=>{
+    html += `<div class="sd-item${_sdValues[key]===item?' selected':''}" onclick="selectDropdown('${key}','${item.replace(/'/g,"\\'")}')">${item}${_sdValues[key]===item?' ✓':''}</div>`;
+  });
+  const lbl = {campagne:'campagne',depot:'dépôt',poseur:'poseur'}[key];
+  html += `<div class="sd-item add-new" onclick="addNewFromDropdown('${key}','${q.replace(/'/g,"\\'")}')">➕ ${q?'Ajouter "'+q+'"':'Ajouter '+lbl+'...'}</div>`;
   return html;
 }
 
-window.toggleDropdown = function(key){
+function toggleDropdown(key){
   const panel = document.getElementById('sd-panel-'+key);
   const isOpen = panel.classList.contains('open');
   closeAllDropdowns();
@@ -371,42 +336,38 @@ window.toggleDropdown = function(key){
     document.getElementById('sd-btn-'+key).classList.add('open');
     setTimeout(()=>{ const s=document.getElementById('sd-search-'+key); if(s) s.focus(); },100);
   }
-};
+}
 
 function closeAllDropdowns(){
   document.querySelectorAll('.sd-panel').forEach(p=>p.classList.remove('open'));
   document.querySelectorAll('.sd-display').forEach(b=>b.classList.remove('open'));
 }
-window.closeAllDropdowns = closeAllDropdowns;
 
-window.filterDropdown = function(key){
-  const query = document.getElementById('sd-search-'+key).value;
+function filterDropdown(key){
+  const q = document.getElementById('sd-search-'+key).value;
   const arrMap = {campagne:'camps',depot:'depots',poseur:'poseurs'};
-  document.getElementById('sd-list-'+key).innerHTML = renderDropdownItems(key, window._db[arrMap[key]], query);
-};
+  document.getElementById('sd-list-'+key).innerHTML = renderDropdownItems(key, _cfg[arrMap[key]], q);
+}
 
-window.selectDropdown = function(key, val){
-  window._sdValues[key] = val;
+function selectDropdown(key, val){
+  _sdValues[key] = val;
   closeAllDropdowns();
   rebuildDropdown(key);
   updatePreview();
-};
+}
 
-window.addNewFromDropdown = async function(key, val){
+async function addNewFromDropdown(key, val){
   const arrMap = {campagne:'camps',depot:'depots',poseur:'poseurs'};
   const labelMap = {campagne:'Campagne',depot:'Dépôt',poseur:'Poseur'};
   const input = val || prompt('Nouveau '+labelMap[key]+':');
   if(!input||!input.trim()) return;
   const v = input.trim();
-  if(!window._db[arrMap[key]].includes(v)){
-    window._db[arrMap[key]].push(v);
-    await saveConfig();
-  }
-  window._sdValues[key] = v;
+  if(!_cfg[arrMap[key]].includes(v)){ _cfg[arrMap[key]].push(v); await saveConfig(); }
+  _sdValues[key] = v;
   closeAllDropdowns();
   rebuildDropdown(key);
   updatePreview();
-};
+}
 
 function rebuildDropdown(key){
   const config = {
@@ -415,48 +376,46 @@ function rebuildDropdown(key){
     poseur:{containerId:'sd-poseur',placeholder:'— Sélectionner poseur —',arr:'poseurs'}
   };
   const c = config[key];
-  buildDropdown(c.containerId, key, window._db[c.arr], c.placeholder);
+  buildDropdown(c.containerId, key, _cfg[c.arr], c.placeholder);
 }
 
-window.buildAllDropdowns = function(){
-  buildDropdown('sd-campagne','campagne',window._db.camps,'— Sélectionner campagne —');
-  buildDropdown('sd-depot','depot',window._db.depots,'— Sélectionner dépôt —');
-  buildDropdown('sd-poseur','poseur',window._db.poseurs,'— Sélectionner poseur —');
-};
+function buildAllDropdowns(){
+  buildDropdown('sd-campagne','campagne',_cfg.camps,'— Sélectionner campagne —');
+  buildDropdown('sd-depot','depot',_cfg.depots,'— Sélectionner dépôt —');
+  buildDropdown('sd-poseur','poseur',_cfg.poseurs,'— Sélectionner poseur —');
+}
 
-document.addEventListener('click', function(e){ if(!e.target.closest('.sd-wrap')) closeAllDropdowns(); });
+document.addEventListener('click', e=>{ if(!e.target.closest('.sd-wrap')) closeAllDropdowns(); });
 
 // ══ ACTION ══
-window.setAction = function(a){
-  window._state.action = a;
+function setAction(a){
+  _state.action = a;
   document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.act-btn.'+a.toLowerCase()).classList.add('active');
   updatePreview();
-};
+}
 
 // ══ FILE ══
-window.handleFile = function(input){
+function handleFile(input){
   const f = input.files[0]; if(!f) return;
-  window._state.file = f;
-  window._state.fileURL = URL.createObjectURL(f);
+  _state.file = f; _state.fileURL = URL.createObjectURL(f);
   document.getElementById('photoArea').innerHTML = `
     <div class="preview-wrap">
-      <img src="${window._state.fileURL}" class="preview-img"/>
+      <img src="${_state.fileURL}" class="preview-img"/>
       <button class="change-photo" onclick="changePhoto()">🔄 Changer</button>
     </div>`;
   updatePreview();
-};
+}
 
-window.changePhoto = function(){
-  window._state.file=null; window._state.fileURL=null;
+function changePhoto(){
+  _state.file=null; _state.fileURL=null;
   document.getElementById('photoArea').innerHTML=`
     <label for="fileInput" class="photo-label">
-      <span class="ph-icon">📷</span>
-      <span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
+      <span class="ph-icon">📷</span><span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
     </label>`;
   document.getElementById('fileInput').value='';
   updatePreview();
-};
+}
 
 // ══ FILENAME ══
 function pad(n){return String(n).padStart(3,'0');}
@@ -464,113 +423,92 @@ function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFu
 
 function buildFileName(){
   const bus = document.getElementById('busNum').value.trim();
-  const camp = window._sdValues.campagne;
-  if(!bus||!camp||!window._state.file) return null;
-  const ext = window._state.file.name.split('.').pop().toLowerCase();
-  return `${pad(bus)}_${window._state.action}_${camp.replace(/\s+/g,'-')}_${getDate()}.${ext}`;
+  const camp = _sdValues.campagne;
+  if(!bus||!camp||!_state.file) return null;
+  const ext = _state.file.name.split('.').pop().toLowerCase();
+  return `${pad(bus)}_${_state.action}_${camp.replace(/\s+/g,'-')}_${getDate()}.${ext}`;
 }
 
-window.updatePreview = function(){
+function updatePreview(){
   const fn = buildFileName();
   const box = document.getElementById('fnameBox');
   const btn = document.getElementById('dlBtn');
-  if(fn){
-    box.style.display='block';
-    document.getElementById('fnameVal').textContent='📎 '+fn;
-    btn.disabled=false;
-  } else {
-    box.style.display='none';
-    btn.disabled=true;
-  }
-};
+  if(fn){ box.style.display='block'; document.getElementById('fnameVal').textContent='📎 '+fn; btn.disabled=false; }
+  else { box.style.display='none'; btn.disabled=true; }
+}
 
 // ══ CAPTURE ══
-window.doCapture = async function(){
+async function doCapture(){
   const fn = buildFileName(); if(!fn) return;
   const btn = document.getElementById('dlBtn');
   btn.disabled=true; btn.textContent='⏳ Upload...';
   document.getElementById('progressWrap').style.display='block';
 
-  try {
-    // Upload to Firebase Storage
-    const storageRef = ref(storage, `photos/${Date.now()}_${fn}`);
-    const uploadTask = uploadBytesResumable(storageRef, window._state.file);
+  const storageRef = storage.ref('photos/'+Date.now()+'_'+fn);
+  const uploadTask = storageRef.put(_state.file);
 
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        const pct = Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100);
-        document.getElementById('progressFill').style.width = pct+'%';
-        document.getElementById('progressText').textContent = `Upload ${pct}%`;
-      },
-      (error) => {
-        showToast('❌ Erreur upload');
-        btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO';
-        document.getElementById('progressWrap').style.display='none';
-      },
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        const storagePath = uploadTask.snapshot.ref.fullPath;
+  uploadTask.on('state_changed',
+    snap => {
+      const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
+      document.getElementById('progressFill').style.width = pct+'%';
+      document.getElementById('progressText').textContent = 'Upload '+pct+'%';
+    },
+    err => {
+      showToast('❌ Erreur upload');
+      btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO';
+      document.getElementById('progressWrap').style.display='none';
+    },
+    async () => {
+      const photoURL = await uploadTask.snapshot.ref.getDownloadURL();
+      const storagePath = uploadTask.snapshot.ref.fullPath;
+      await db.collection('records').add({
+        bus: pad(document.getElementById('busNum').value.trim()),
+        action: _state.action,
+        campagne: _sdValues.campagne,
+        depot: _sdValues.depot,
+        poseur: _sdValues.poseur,
+        fileName: fn,
+        photoURL, storagePath,
+        date: getDate(),
+        time: new Date().toLocaleTimeString('fr-FR'),
+        timestamp: Date.now()
+      });
+      document.getElementById('progressWrap').style.display='none';
+      showToast('✅ Photo envoyée !');
+      resetCapture();
+    }
+  );
+}
 
-        // Save to Firestore
-        await addDoc(collection(db,'records'), {
-          bus: pad(document.getElementById('busNum').value.trim()),
-          action: window._state.action,
-          campagne: window._sdValues.campagne,
-          depot: window._sdValues.depot,
-          poseur: window._sdValues.poseur,
-          fileName: fn,
-          photoURL: downloadURL,
-          storagePath,
-          date: getDate(),
-          time: new Date().toLocaleTimeString('fr-FR'),
-          timestamp: Date.now()
-        });
-
-        document.getElementById('progressWrap').style.display='none';
-        showToast('✅ Photo envoyée !');
-        resetCapture();
-      }
-    );
-  } catch(e){
-    showToast('❌ Erreur: '+e.message);
-    btn.disabled=false; btn.textContent='📤 ENVOYER LA PHOTO';
-    document.getElementById('progressWrap').style.display='none';
-  }
-};
-
-window.resetCapture = function(){
+function resetCapture(){
   document.getElementById('busNum').value='';
-  window._sdValues={campagne:'',depot:'',poseur:''};
-  window._state.file=null; window._state.fileURL=null; window._state.action='POSE';
+  _sdValues={campagne:'',depot:'',poseur:''};
+  _state.file=null; _state.fileURL=null; _state.action='POSE';
   document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.act-btn.pose').classList.add('active');
   document.getElementById('photoArea').innerHTML=`
     <label for="fileInput" class="photo-label">
-      <span class="ph-icon">📷</span>
-      <span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
+      <span class="ph-icon">📷</span><span class="ph-text">PRENDRE / CHOISIR PHOTO</span>
     </label>`;
   document.getElementById('fileInput').value='';
   document.getElementById('fnameBox').style.display='none';
   document.getElementById('btnArea').innerHTML=`
     <button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📤 ENVOYER LA PHOTO</button>`;
   buildAllDropdowns();
-};
+}
 
 // ══ HISTORY ══
-window.filterHist = function(f,el){
-  window._state.filter=f;
+function filterHist(f,el){
+  _state.filter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   renderHistory();
-};
+}
 
 function renderHistory(){
   const list = document.getElementById('histList');
-  const records = window._state.filter==='ALL' ? window._records : window._records.filter(r=>r.action===window._state.filter);
-  if(!records.length){
-    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO</div></div>`;
-    return;
-  }
+  const records = _state.filter==='ALL' ? _records : _records.filter(r=>r.action===_state.filter);
+  if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO</div></div>`; return; }
   list.innerHTML = records.map(r=>`
     <div class="hist-item">
       <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'"/>
@@ -584,59 +522,56 @@ function renderHistory(){
         <div class="hist-meta" style="color:#444">${r.date} ${r.time}</div>
       </div>
       <div class="hist-actions">
-        <button class="hist-dl" onclick="downloadPhoto('${r.photoURL}','${r.fileName}')" title="Télécharger">⬇️</button>
-        <button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath}')" title="Supprimer">🗑️</button>
+        <button class="hist-dl" onclick="downloadPhoto('${r.photoURL}','${r.fileName}')">⬇️</button>
+        <button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>
       </div>
     </div>`).join('');
 }
 
-window.downloadPhoto = function(url, name){
-  const a = document.createElement('a'); a.href=url; a.download=name; a.target='_blank'; a.click();
-};
+function downloadPhoto(url, name){
+  const a=document.createElement('a'); a.href=url; a.download=name; a.target='_blank'; a.click();
+}
 
-window.deleteRecord = async function(id, storagePath){
+async function deleteRecord(id, storagePath){
   if(!confirm('Supprimer cette photo ?')) return;
   try {
-    await deleteDoc(doc(db,'records',id));
-    if(storagePath){ try{ await deleteObject(ref(storage,storagePath)); }catch(e){} }
+    await db.collection('records').doc(id).delete();
+    if(storagePath){ try{ await storage.ref(storagePath).delete(); }catch(e){} }
     showToast('🗑️ Supprimé');
-  } catch(e){ showToast('❌ Erreur suppression'); }
-};
+  } catch(e){ showToast('❌ Erreur'); }
+}
 
 // ══ STATS ══
 function renderStats(){
-  document.getElementById('statPose').textContent=window._records.filter(r=>r.action==='POSE').length;
-  document.getElementById('statDepose').textContent=window._records.filter(r=>r.action==='DEPOSE').length;
-  document.getElementById('statFilm').textContent=window._records.filter(r=>r.action==='FILM').length;
+  document.getElementById('statPose').textContent=_records.filter(r=>r.action==='POSE').length;
+  document.getElementById('statDepose').textContent=_records.filter(r=>r.action==='DEPOSE').length;
+  document.getElementById('statFilm').textContent=_records.filter(r=>r.action==='FILM').length;
 }
 
-window.exportCSV = function(){
-  if(!window._records.length) return showToast('Aucune donnée');
+function exportCSV(){
+  if(!_records.length) return showToast('Aucune donnée');
   const h=['N°Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
-  const rows=window._records.map(r=>[r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time]);
+  const rows=_records.map(r=>[r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time]);
   const csv=[h,...rows].map(r=>r.map(v=>`"${v||''}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
-  a.download=`rapport_${getDate()}.csv`; a.click();
-};
+  a.download='rapport_'+getDate()+'.csv'; a.click();
+}
 
-window.exportTXT = function(){
-  if(!window._records.length) return showToast('Aucune donnée');
+function exportTXT(){
+  if(!_records.length) return showToast('Aucune donnée');
   const lines=['RAPPORT BUSTRACK - '+getDate(),'='.repeat(40),''];
-  window._records.forEach(r=>{
-    lines.push(`[${r.action}] Bus ${r.bus} | ${r.campagne} | ${r.depot||'-'} | ${r.poseur||'-'} | ${r.date} ${r.time}`);
-    lines.push(`  → ${r.fileName}`);
-  });
+  _records.forEach(r=>{ lines.push(`[${r.action}] Bus ${r.bus} | ${r.campagne} | ${r.depot||'-'} | ${r.poseur||'-'} | ${r.date} ${r.time}`); lines.push('  → '+r.fileName); });
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8;'}));
-  a.download=`rapport_${getDate()}.txt`; a.click();
-};
+  a.download='rapport_'+getDate()+'.txt'; a.click();
+}
 
 // ══ SETTINGS ══
 function renderSettings(){
-  renderTags('camp','campList',window._db.camps);
-  renderTags('depot','depotList',window._db.depots);
-  renderTags('poseur','poseurList',window._db.poseurs);
+  renderTags('camp','campList',_cfg.camps);
+  renderTags('depot','depotList',_cfg.depots);
+  renderTags('poseur','poseurList',_cfg.poseurs);
 }
 
 function renderTags(type,listId,items){
@@ -645,33 +580,25 @@ function renderTags(type,listId,items){
     :'<span style="font-size:11px;color:var(--muted)">Aucun élément</span>';
 }
 
-window.addItem = async function(type){
+async function addItem(type){
   const inputMap={camp:'newCamp',depot:'newDepot',poseur:'newPoseur'};
   const arrMap={camp:'camps',depot:'depots',poseur:'poseurs'};
   const input=document.getElementById(inputMap[type]);
   const val=input.value.trim(); if(!val) return;
-  if(!window._db[arrMap[type]].includes(val)){
-    window._db[arrMap[type]].push(val);
-    await saveConfig();
-    renderSettings();
-    buildAllDropdowns();
-  }
+  if(!_cfg[arrMap[type]].includes(val)){ _cfg[arrMap[type]].push(val); await saveConfig(); renderSettings(); buildAllDropdowns(); }
   input.value='';
-};
+}
 
-window.removeItem = async function(type,idx){
+async function removeItem(type,idx){
   const arrMap={camp:'camps',depot:'depots',poseur:'poseurs'};
-  window._db[arrMap[type]].splice(idx,1);
-  await saveConfig();
-  renderSettings();
-  buildAllDropdowns();
-};
+  _cfg[arrMap[type]].splice(idx,1);
+  await saveConfig(); renderSettings(); buildAllDropdowns();
+}
 
 function updateHeaderCount(){
-  document.getElementById('totalCount').textContent=window._records.length+' photos';
-  const dot = document.getElementById('syncDot');
-  dot.style.opacity='1';
-  setTimeout(()=>dot.style.opacity='0', 1500);
+  document.getElementById('totalCount').textContent=_records.length+' photos';
+  const dot=document.getElementById('syncDot');
+  dot.style.opacity='1'; setTimeout(()=>dot.style.opacity='0',1500);
 }
 
 function showToast(msg){
