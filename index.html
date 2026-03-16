@@ -8,9 +8,6 @@
 <meta name="theme-color" content="#FDDD00"/>
 <title>CasaBus Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <style>
 :root{
   --yellow:#FDDD00;
@@ -474,6 +471,9 @@ body.light .depot-btn.active{color:var(--gray);}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <script>
 // ══ LOGIN ══
 // Codes: { code: { name, role } }
@@ -549,17 +549,22 @@ function loginSuccess(){
 }
 
 // ══ FIREBASE ══
-const firebaseConfig = {
-  apiKey: "AIzaSyDF-tmpN-rZwlVsLCHcQVcXxWvKZFDn22c",
-  authDomain: "alsa-bus-2ec91.firebaseapp.com",
-  projectId: "alsa-bus-2ec91",
-  storageBucket: "alsa-bus-2ec91.firebasestorage.app",
-  messagingSenderId: "456087602293",
-  appId: "1:456087602293:web:7e68499122b412a3f5a43c"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
+var db, storage;
+try {
+  var firebaseConfig = {
+    apiKey: "AIzaSyDF-tmpN-rZwlVsLCHcQVcXxWvKZFDn22c",
+    authDomain: "alsa-bus-2ec91.firebaseapp.com",
+    projectId: "alsa-bus-2ec91",
+    storageBucket: "alsa-bus-2ec91.firebasestorage.app",
+    messagingSenderId: "456087602293",
+    appId: "1:456087602293:web:7e68499122b412a3f5a43c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  storage = firebase.storage();
+} catch(e) {
+  console.warn('Firebase init error:', e.message);
+}
 
 // ══ STATE ══
 let _state = { action:'POSE', file:null, fileURL:null };
