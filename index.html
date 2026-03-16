@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head><!-- BusTrack Pro v2.1 -->
+<head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -93,9 +93,42 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   font-size:11px;font-weight:700;padding:5px 14px;
   border-radius:20px;letter-spacing:0.5px;font-family:'Montserrat',sans-serif;
 }
-.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);}
-.tab{flex:1;padding:13px 4px;text-align:center;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;font-weight:600;font-family:'Montserrat',sans-serif;}
-.tab.active{color:var(--yellow);border-bottom-color:var(--yellow);font-weight:800;}
+.tabs{
+  display:flex;
+  background:var(--surface);
+  border-bottom:2px solid var(--border);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{
+  flex:1;
+  min-width:60px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:10px 6px 9px;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  transition:all 0.15s;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+}
+.tab-icon{font-size:22px;line-height:1;display:block;}
+.tab-label{
+  font-family:'Montserrat',sans-serif;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  color:var(--muted);
+  display:block;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.tab.active .tab-label{color:var(--yellow);}
+.tab.active{border-bottom-color:var(--yellow);background:rgba(253,221,0,0.06);}
 .page{display:none;padding:16px;max-width:520px;margin:0 auto;}
 .page.active{display:block;animation:fadeIn 0.2s ease;}
 .card{background:var(--surface);border-radius:12px;padding:18px;border:1px solid var(--border);margin-bottom:14px;}
@@ -437,12 +470,12 @@ body.lang-ar .lbl { letter-spacing: 0; }
   </div>
 
   <div class="tabs" id="tabsBar">
-    <div class="tab active" onclick="showTab('capture',this)">📷 CAPTURE</div>
-    <div class="tab" onclick="showTab('history',this)">👥 ÉQUIPE</div>
-    <div class="tab" id="dashTab" style="display:none" onclick="showTab('dashboard',this)">📈 STATS</div>
-    <div class="tab admin-tab" onclick="showTab('gestion',this)">✏️ GESTION</div>
-    <div class="tab admin-tab" onclick="showTab('export',this)">📊 RAPPORT</div>
-    <div class="tab admin-tab" onclick="showTab('settings',this)">⚙️ CONFIG</div>
+    <div class="tab active" onclick="showTab('capture',this)"><span class="tab-icon">📷</span><span class="tab-label">CAPTURE</span></div>
+    <div class="tab" onclick="showTab('history',this)"><span class="tab-icon">👥</span><span class="tab-label">ÉQUIPE</span></div>
+    <div class="tab" id="dashTab" style="display:none" onclick="showTab('dashboard',this)"><span class="tab-icon">📈</span><span class="tab-label">STATS</span></div>
+    <div class="tab admin-tab" onclick="showTab('gestion',this)"><span class="tab-icon">✏️</span><span class="tab-label">GESTION</span></div>
+    <div class="tab admin-tab" onclick="showTab('export',this)"><span class="tab-icon">📊</span><span class="tab-label">RAPPORT</span></div>
+    <div class="tab admin-tab" onclick="showTab('settings',this)"><span class="tab-icon">⚙️</span><span class="tab-label">CONFIG</span></div>
   </div>
 
   <!-- CAPTURE -->
