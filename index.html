@@ -944,10 +944,8 @@ function busLookup(){
   var result = document.getElementById('busLookupResult');
   if(!busNum){ result.innerHTML=''; return; }
 
-  // Find all records for this bus
   var records = _records.filter(function(r){
-    return (r.bus||'').toString() === busNum.toString() ||
-           parseInt(r.bus) === parseInt(busNum);
+    return parseInt(r.bus) === parseInt(busNum);
   });
 
   if(!records.length){
@@ -955,58 +953,85 @@ function busLookup(){
     return;
   }
 
-  // Sort by timestamp desc
-  records.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+  // Sort oldest → newest
+  records.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
 
-  // Last action
-  var last = records[0];
+  var last = records[records.length-1];
   var actionColor = last.action==='POSE'?'var(--pose)':last.action==='DEPOSE'?'var(--depose)':'var(--film)';
-
-  // Count per action
   var poses   = records.filter(function(r){return r.action==='POSE';}).length;
   var deposes = records.filter(function(r){return r.action==='DEPOSE';}).length;
   var films   = records.filter(function(r){return r.action==='FILM';}).length;
 
-  var html = '<div style="background:var(--bg);border-radius:12px;padding:14px;border:1.5px solid '+actionColor+';">';
-  
-  // Last action banner
-  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
-  html += '<span style="font-size:28px;">🚌</span>';
-  html += '<div>';
-  html += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:16px;">Bus '+last.bus+'</div>';
-  html += '<div style="font-size:12px;color:var(--muted);">'+records.length+' action(s) au total</div>';
+  var html = '<div>';
+
+  // Header summary
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+  html += '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:16px;">🚌 Bus '+last.bus+'</div>';
+  html += '<div style="display:flex;gap:6px;">';
+  html += '<span style="padding:4px 10px;border-radius:20px;background:rgba(0,230,118,0.12);color:var(--pose);font-size:11px;font-weight:700;">'+poses+' POSE</span>';
+  html += '<span style="padding:4px 10px;border-radius:20px;background:rgba(41,121,255,0.12);color:var(--film);font-size:11px;font-weight:700;">'+films+' FILM</span>';
+  html += '<span style="padding:4px 10px;border-radius:20px;background:rgba(255,102,0,0.12);color:var(--depose);font-size:11px;font-weight:700;">'+deposes+' DEPOSE</span>';
   html += '</div></div>';
 
-  // Last action detail
-  html += '<div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:10px;">';
-  html += '<div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;margin-bottom:6px;">DERNIÈRE ACTION</div>';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
-  html += '<div>';
-  html += '<span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:'+actionColor+';">'+last.action+'</span>';
-  html += '<div style="font-size:12px;color:var(--muted);margin-top:2px;">📅 '+last.date+' '+last.time+'</div>';
-  html += '<div style="font-size:12px;color:var(--muted);">'+last.campagne+(last.depot?' · '+last.depot:'')+'</div>';
+  // Last action indicator
+  html += '<div style="padding:8px 12px;border-radius:8px;background:rgba(253,221,0,0.08);border:1px solid rgba(253,221,0,0.2);margin-bottom:12px;font-size:12px;">';
+  html += '⚡ <strong>Dernière action:</strong> <span style="color:'+actionColor+';font-weight:800;">'+last.action+'</span> — 👷 '+(last.poseur||'—')+' — 📅 '+last.date;
   html += '</div>';
-  html += '<div style="text-align:right;">';
-  html += '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;color:#FDDD00;">👷 '+(last.poseur||'—')+'</div>';
-  html += '</div>';
+
+  // Timeline - all records oldest to newest
+  html += '<div style="position:relative;padding-left:20px;">';
+  html += '<div style="position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--border);"></div>';
+
+  records.forEach(function(r, i){
+    var ac = r.action==='POSE'?'var(--pose)':r.action==='DEPOSE'?'var(--depose)':'var(--film)';
+    var icon = r.action==='POSE'?'🖼️':r.action==='DEPOSE'?'🗑️':'🛡️';
+    var isLast = i === records.length-1;
+    var driveLink = r.driveUrl || (r.photoURL && !r.photoURL.startsWith('data:') ? r.photoURL : '');
+    var hasThumb = r.photoURL && r.photoURL.startsWith('data:');
+
+    html += '<div style="position:relative;margin-bottom:14px;">';
+    // Timeline dot
+    html += '<div style="position:absolute;left:-15px;top:10px;width:10px;height:10px;border-radius:50%;background:'+ac+';border:2px solid var(--bg);'+(isLast?'box-shadow:0 0 0 3px '+ac+'33;':'')+'"></div>';
+
+    var cardBorder = isLast ? ac : 'var(--border)';
+    var cardShadow = isLast ? 'box-shadow:0 2px 8px '+ac+'22;' : '';
+    html += '<div style="background:var(--surface);border-radius:12px;padding:12px;border:1px solid '+cardBorder+';'+cardShadow+'">';
+    
+    // Action header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;">';
+    html += '<span style="font-size:20px;">'+icon+'</span>';
+    html += '<span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;color:'+ac+';">'+r.action+'</span>';
+    if(isLast) html += '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:'+ac+'22;color:'+ac+';font-weight:700;">DERNIÈRE</span>';
+    html += '</div>';
+    html += '<span style="font-size:11px;color:var(--muted);">'+r.time+'</span>';
+    html += '</div>';
+
+    // Info
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📅 '+r.date+' · '+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
+    html += '<div style="font-size:13px;font-weight:600;color:#FDDD00;margin-bottom:8px;">👷 '+(r.poseur||'—')+'</div>';
+
+    // Photo
+    if(hasThumb || driveLink){
+      html += '<div style="display:flex;gap:8px;align-items:center;">';
+      if(hasThumb){
+        html += '<img src="'+r.photoURL+'" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open(''+(driveLink||r.photoURL)+'','_blank')"/>';
+      }
+      if(driveLink){
+        html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:8px;color:#4285f4;font-size:12px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:11px;color:#666;">📷 Pas de photo</div>';
+    }
+
+    html += '</div></div>';
+  });
+
   html += '</div></div>';
-
-  // Stats
-  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-  html += '<div style="text-align:center;padding:8px;background:rgba(0,230,118,0.08);border-radius:8px;">';
-  html += '<div style="font-size:18px;font-weight:800;color:var(--pose);">'+poses+'</div>';
-  html += '<div style="font-size:9px;color:var(--muted);font-weight:700;">POSE</div></div>';
-  html += '<div style="text-align:center;padding:8px;background:rgba(41,121,255,0.08);border-radius:8px;">';
-  html += '<div style="font-size:18px;font-weight:800;color:var(--film);">'+films+'</div>';
-  html += '<div style="font-size:9px;color:var(--muted);font-weight:700;">FILM</div></div>';
-  html += '<div style="text-align:center;padding:8px;background:rgba(255,102,0,0.08);border-radius:8px;">';
-  html += '<div style="font-size:18px;font-weight:800;color:var(--depose);">'+deposes+'</div>';
-  html += '<div style="font-size:9px;color:var(--muted);font-weight:700;">DEPOSE</div></div>';
-  html += '</div>';
-
-  html += '</div>';
   result.innerHTML = html;
 }
+
 
 // ══ GESTION ══
 var _gestionFilter = '';
