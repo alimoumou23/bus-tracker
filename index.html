@@ -1197,17 +1197,16 @@ async function doCapture(){
     document.getElementById('progressFill').style.width='50%';
     document.getElementById('progressText').textContent='Upload en cours...';
 
-    // Upload to Google Drive via Apps Script
-    // Use no-cors mode - fire and forget (CORS limitation with Apps Script)
-    var photoURL = await toThumb(_state.file); // Save thumb for preview
+    // Save thumb for local preview
+    var photoURL = await toThumb(_state.file);
+    var driveUrl = '';
     
     document.getElementById('progressFill').style.width='60%';
     document.getElementById('progressText').textContent='Envoi vers Google Drive...';
     
     try {
-      // Try with CORS first
       var controller = new AbortController();
-      var timeoutId = setTimeout(function(){ controller.abort(); }, 10000);
+      var timeoutId = setTimeout(function(){ controller.abort(); }, 15000);
       
       var response = await fetch(DRIVE_SCRIPT_URL, {
         method: 'POST',
@@ -1217,14 +1216,18 @@ async function doCapture(){
       });
       clearTimeout(timeoutId);
       
-      var result = await response.json();
+      // Safe JSON parse
+      var text = await response.text();
+      var result = null;
+      try { result = JSON.parse(text); } catch(e) { result = null; }
+      
       if(result && result.success && result.url) {
-        photoURL = result.url;
+        driveUrl = result.driveUrl || result.url;
+        photoURL = result.url; // Use Drive URL for preview
       }
     } catch(fetchErr) {
-      // CORS blocked response but request likely went through
-      // Use thumbnail for preview, Drive will have the photo
-      console.log('Drive upload (CORS):', fetchErr.message);
+      // CORS ou timeout — la photo sera dans Drive quand même
+      console.log('Drive fetch note:', fetchErr.message);
     }
     
     document.getElementById('progressFill').style.width='80%';
@@ -1235,7 +1238,7 @@ async function doCapture(){
       action:_state.action,campagne:_sdValues.campagne,
       depot:_sdValues.depot,poseur:_sdValues.poseur,
       fileName:fn,photoURL:photoURL,storagePath:'',
-      driveUrl: result.success ? result.url : '',
+      driveUrl: driveUrl,
       date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
     });
 
