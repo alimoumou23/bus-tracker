@@ -433,6 +433,13 @@ body.light .depot-btn.active{color:var(--gray);}
 
   <!-- ÉQUIPE -->
   <div class="page" id="page-history">
+    <!-- Dashboard stats - admin/chef only -->
+    <div id="statsBoard" style="display:none;margin-bottom:14px;">
+      <div class="card">
+        <div class="card-title">📊 STATS PAR POSEUR</div>
+        <div id="poseurStatsTable"></div>
+      </div>
+    </div>
     <div class="date-nav">
       <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
       <div class="date-display" id="dateDisplay" onclick="document.getElementById('datePicker').click()"></div>
@@ -582,6 +589,8 @@ async function doLogin(){
   }
 
   // Check local poseur codes (always works offline too)
+  // Chef codes - can select any poseur name
+  var chefCodes = { '1005':'Azize' };
   var localCodes = {
     '1001':'Yassin','1002':'Hamza','1003':'Othmane','1004':'Chouaib',
     '1005':'Azize','1006':'Rachid','1007':'Adil','1008':'Hamid','1009':'Azlag'
@@ -669,7 +678,8 @@ let _cfg = {
     '1007':'Adil',
     '1008':'Hamid',
     '1009':'Azlag'
-  }
+  },
+  chefs:['Azize']
 };
 let _records = [];
 let _sdValues = { campagne:'', depot:'', poseur:'' };
@@ -697,10 +707,18 @@ async function init(){
     }
   } catch(e){ console.warn('Config load error:', e); }
 
-  // Auto-set poseur from login
-  if(_currentUser && _currentUser.role==='equipe'){
-    _sdValues.poseur = _currentUser.name;
-    document.getElementById('poseurField').style.display='none';
+  // Set poseur based on role
+  if(_currentUser){
+    if(_currentUser.role==='equipe'){
+      // Regular poseur: auto-set their name, hide field
+      _sdValues.poseur = _currentUser.name;
+      document.getElementById('poseurField').style.display='none';
+    } else if(_currentUser.role==='chef'){
+      // Chef: can pick any poseur, show dropdown
+      _sdValues.poseur = _currentUser.name; // default to self
+      document.getElementById('poseurField').style.display='block';
+    }
+    // Admin: full dropdown
   }
   buildAllDropdowns();
   buildDepotButtons();
@@ -826,8 +844,8 @@ function renderGestion(){
           '<strong style="font-family:Montserrat,sans-serif;font-size:14px;">Bus '+r.bus+'</strong>' +
         '</div>' +
         '<div class="gest-actions">' +
-          '<button class="gest-btn gest-edit" data-id="'+r.id+'">✏️ Modifier</button>' +
-          '<button class="gest-btn gest-del" data-id="'+r.id+'" data-sp="'+sp+'">🗑️</button>' +
+          (isAdmin ? '<button class="gest-btn gest-edit" data-id="'+r.id+'">✏️ Modifier</button>' : '') +
+          (isAdmin ? '<button class="gest-btn gest-del" data-id="'+r.id+'" data-sp="'+sp+'">🗑️</button>' : '') +
         '</div>' +
       '</div>' +
       '<div class="gest-info">📅 '+r.date+' '+r.time+'</div>' +
@@ -867,6 +885,53 @@ async function saveEdit(id){
   } catch(e){
     showToast('❌ Erreur: '+e.message);
   }
+}
+
+
+// ══ STATS PAR POSEUR ══
+function renderPoseurStats(){
+  var table = document.getElementById('poseurStatsTable');
+  if(!table) return;
+  
+  // Get all poseurs from records
+  var poseurSet = {};
+  _records.forEach(function(r){
+    var p = r.poseur || '—';
+    if(!poseurSet[p]) poseurSet[p] = {pose:0,depose:0,film:0,total:0};
+    poseurSet[p][r.action.toLowerCase()]++;
+    poseurSet[p].total++;
+  });
+  
+  if(!Object.keys(poseurSet).length){
+    table.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px;">Aucune donnée</div>';
+    return;
+  }
+  
+  // Sort by total desc
+  var sorted = Object.entries(poseurSet).sort(function(a,b){return b[1].total-a[1].total;});
+  
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr style="color:var(--muted);font-size:10px;letter-spacing:1px;border-bottom:1px solid var(--border);">';
+  html += '<th style="text-align:left;padding:6px 4px;">POSEUR</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--pose);">🖼️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--depose);">🗑️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--film);">🛡️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--yellow);">TOTAL</th>';
+  html += '</tr>';
+  
+  sorted.forEach(function(entry){
+    var name = entry[0];
+    var s = entry[1];
+    html += '<tr style="border-bottom:1px solid var(--border);">';
+    html += '<td style="padding:8px 4px;font-weight:600;">'+name+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--pose);">'+s.pose+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--depose);">'+s.depose+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--film);">'+s.film+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;font-weight:700;color:var(--yellow);">'+s.total+'</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+  table.innerHTML = html;
 }
 
 // ══ TABS ══
