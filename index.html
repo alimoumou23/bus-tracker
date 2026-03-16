@@ -1435,6 +1435,9 @@ function applyTranslations(){
     el.textContent = t('aucune');
   });
 
+  // Rebuild depot buttons with new language
+  buildDepotButtons();
+
   // EQUIPE action filter buttons
   document.querySelectorAll('#actionFilters .filter-btn').forEach(function(btn){
     var txt = btn.textContent.trim();
@@ -1529,7 +1532,7 @@ function buildDepotButtons(){
   for(var i=0; i<depots.length; i++){
     var d = depots[i];
     var active = (_sdValues.depot===d) ? ' active' : '';
-    html += '<button class="depot-btn'+active+'" data-depot="'+d+'">'+d+'</button>';
+    html += '<button class="depot-btn'+active+'" data-depot="'+d+'">'+dLabel+'</button>';
   }
   wrap.innerHTML = html;
   wrap.querySelectorAll('.depot-btn').forEach(function(btn){
