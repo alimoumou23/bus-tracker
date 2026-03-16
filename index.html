@@ -740,13 +740,8 @@ function loginSuccess(){
     document.querySelectorAll('.admin-tab').forEach(t=>t.style.display='none');
     document.querySelectorAll('.admin-only').forEach(t=>t.style.display='none');
   } else if(role === 'chef'){
-    // Chef (Aziz): show RAPPORT + CONFIG, hide GESTION only
-    document.querySelectorAll('.admin-tab').forEach(function(t){
-      // Hide only GESTION tab
-      if(t.textContent.includes('GESTION') || (t.querySelector && t.querySelector('.tab-label') && t.querySelector('.tab-label').textContent.includes('GESTION'))){
-        t.style.display='none';
-      }
-    });
+    // Chef (Aziz): CAPTURE + EQUIPE only (like poseur) but can edit + select any poseur
+    document.querySelectorAll('.admin-tab').forEach(t=>t.style.display='none');
     document.querySelectorAll('.admin-only').forEach(t=>t.style.display='none');
   }
   // admin: show everything
