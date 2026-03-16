@@ -618,13 +618,15 @@ body.lang-ar .lbl { letter-spacing: 0; }
       </div>
       <div id="filteredStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
       <div id="filteredInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center;letter-spacing:1px;"></div>
-      <button class="export-btn" onclick="exportExcelFiltered()"><span>📊</span> Télécharger Excel + liens Drive (période)</button>
+      <button class="export-btn" onclick="exportExcelFilteredWithImages()"><span>🖼️</span> Télécharger Excel + Photos (période)</button>
+      <button class="export-btn" onclick="exportExcelFiltered()"><span>📊</span> Télécharger Excel + liens (période)</button>
       <button class="export-btn" onclick="exportPhotosFiltered()" style="border-color:var(--film);color:var(--film);"><span>📦</span> Télécharger photos ZIP (période)</button>
       <button class="export-btn" onclick="deleteByDateRange()" style="border-color:#e53935;color:#e53935;" onmouseover="this.style.borderColor='#e53935';this.style.color='#e53935'"><span>🗑️</span> Supprimer enregistrements (période)</button>
     </div>
 
     <div class="card">
       <div class="card-title">TOUT EXPORTER</div>
+      <button class="export-btn" onclick="exportExcelWithImages()"><span>🖼️</span> Exporter Excel + Photos</button>
       <button class="export-btn" onclick="exportExcelWithLinks()"><span>📊</span> Exporter Excel + liens Drive</button>
       <button class="export-btn" onclick="exportCSV()"><span>📄</span> Exporter CSV simple</button>
     </div>
@@ -1265,6 +1267,97 @@ async function saveEditModal(){
     });
     closeEditModal();
     showToast('✅ Modifié avec succès!');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
+
+
+// ══ EXPORT EXCEL AVEC IMAGES INTÉGRÉES ══
+function exportExcelWithImages(){
+  var records = _records;
+  if(!records.length) return showToast('Aucune donnée');
+  generateExcelHTML(records, 'rapport_casabus_photos');
+}
+
+function exportExcelFilteredWithImages(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune donnée pour cette période');
+  var from = document.getElementById('dateFrom').value || 'debut';
+  var to   = document.getElementById('dateTo').value   || 'fin';
+  generateExcelHTML(records, 'rapport_'+from+'_au_'+to+'_photos');
+}
+
+function generateExcelHTML(records, filename){
+  try {
+    var tableRows = '';
+
+    records.forEach(function(r){
+      var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
+      if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+
+      var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
+      var imgCell = '';
+
+      if(hasBase64){
+        // Embedded image from base64
+        imgCell = '<td style="text-align:center;vertical-align:middle;padding:2px;">'
+          + '<img src="'+r.photoURL+'" width="80" height="80" style="object-fit:cover;"/>'
+          + '</td>';
+      } else if(driveLink){
+        // Link only
+        imgCell = '<td style="text-align:center;vertical-align:middle;">'
+          + '<a href="'+driveLink+'">📸 Voir</a>'
+          + '</td>';
+      } else {
+        imgCell = '<td style="text-align:center;color:#999;">—</td>';
+      }
+
+      var linkCell = driveLink
+        ? '<td><a href="'+driveLink+'">'+driveLink+'</a></td>'
+        : '<td>—</td>';
+
+      var acColor = r.action==='POSE'?'#e8f5e9':r.action==='DEPOSE'?'#fff3e0':'#e3f2fd';
+
+      tableRows += '<tr style="background:'+acColor+';">'
+        + '<td style="font-weight:bold;text-align:center;">'+r.bus+'</td>'
+        + '<td style="font-weight:bold;text-align:center;">'+r.action+'</td>'
+        + '<td>'+( r.campagne||'')+'</td>'
+        + '<td>'+(r.depot||'')+'</td>'
+        + '<td>'+(r.poseur||'')+'</td>'
+        + '<td>'+(r.date||'')+'</td>'
+        + '<td>'+(r.time||'')+'</td>'
+        + imgCell
+        + linkCell
+        + '</tr>';
+    });
+
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+      + 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
+      + 'xmlns="http://www.w3.org/TR/REC-html40">'
+      + '<head><meta charset="UTF-8">'
+      + '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'
+      + '<x:ExcelWorksheet><x:Name>Rapport</x:Name>'
+      + '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>'
+      + '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+      + '<style>td,th{border:1px solid #ccc;padding:6px 10px;font-family:Arial,sans-serif;font-size:12px;}'
+      + 'th{background:#53575A;color:#FDDD00;font-weight:bold;text-align:center;}'
+      + 'table{border-collapse:collapse;}</style></head><body>'
+      + '<table>'
+      + '<tr>'
+      + '<th>N° Bus</th><th>Action</th><th>Campagne</th><th>Dépôt</th>'
+      + '<th>Poseur</th><th>Date</th><th>Heure</th>'
+      + '<th>Photo</th><th>Lien Drive</th>'
+      + '</tr>'
+      + tableRows
+      + '</table></body></html>';
+
+    var blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename+'.xls';
+    a.click();
+    showToast('✅ Excel avec photos téléchargé!');
   } catch(e){
     showToast('❌ Erreur: '+e.message);
   }
