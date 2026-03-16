@@ -484,7 +484,8 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <div class="card-title">INFORMATIONS</div>
       <div class="field">
         <label class="lbl">N° BUS</label>
-        <input type="number" id="busNum" placeholder="Ex: 42" oninput="updatePreview()"/>
+        <input type="number" id="busNum" placeholder="Ex: 42000" maxlength="5" oninput="validateBus(this);updatePreview()"/>
+      <span id="busHint" style="font-size:11px;margin-top:4px;display:block;height:14px;font-family:Montserrat,sans-serif;padding-left:4px;"></span>
       </div>
       <div class="field"><label class="lbl">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
       <div class="field">
@@ -828,6 +829,7 @@ async function init(){
     // Admin: full dropdown
   }
   buildAllDropdowns();
+  if(_lang && _lang !== "fr") applyTranslations();;
   buildDepotButtons();
 
   // Real-time listener for records
@@ -1420,6 +1422,12 @@ function applyTranslations(){
   var loginBtn = document.querySelector('.login-btn');
   if(loginBtn) loginBtn.textContent = t('connexion');
 
+  // Update select placeholders
+  var campSel = document.getElementById('campagneSelect');
+  if(campSel && campSel.options[0]) campSel.options[0].text = t('sel_campagne');
+  var poseurSel = document.getElementById('poseurSelect');
+  if(poseurSel && poseurSel.options[0]) poseurSel.options[0].text = t('sel_poseur');
+
   // Capture labels
   var labels = document.querySelectorAll('.lbl');
   var labelMap = {
@@ -1594,12 +1602,30 @@ function changePhoto(){
 }
 
 // ══ FILENAME ══
-function pad(n){return String(n).padStart(3,'0');}
+
+function validateBus(input){
+  var val = input.value.trim();
+  var hint = document.getElementById('busHint');
+  if(!hint) return;
+  if(!val){ hint.textContent=''; hint.style.color='var(--muted)'; return; }
+  if(val.length < 5){
+    hint.textContent = (5-val.length) + ' chiffre(s) manquant(s)';
+    hint.style.color = '#e53935';
+  } else if(val.length === 5){
+    hint.textContent = '✓';
+    hint.style.color = '#4caf50';
+  } else {
+    hint.textContent = '❌ Max 5 chiffres';
+    hint.style.color = '#e53935';
+  }
+}
+function pad(n){return String(parseInt(n)||0).padStart(5,'0');}
 function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');}
 function buildFileName(){
   const bus=document.getElementById('busNum').value.trim();
   const camp=_sdValues.campagne;
   if(!bus||!camp||!_state.file) return null;
+  if(bus.length !== 5){ showToast('❌ N° Bus doit être 5 chiffres'); return null; }
   const ext=_state.file.name.split('.').pop().toLowerCase();
   return `${pad(bus)}_${_state.action}_${camp.replace(/\s+/g,'-')}_${getDate()}.${ext}`;
 }
