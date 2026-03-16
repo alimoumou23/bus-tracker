@@ -227,7 +227,23 @@ input:focus{border-color:var(--yellow);}
 .hist-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
 .hist-dl{background:var(--surface2);border:none;color:var(--text);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
 .hist-del{background:transparent;border:none;color:#555;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
+.hist-edit{background:rgba(253,221,0,0.1);border:none;color:var(--yellow);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
+.hist-del2{background:transparent;border:none;color:#555;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:14px;}
 .hist-del:hover{color:#e53935;}
+
+/* DASHBOARD */
+.poseur-card{background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border);}
+.poseur-name{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.poseur-total{font-size:12px;color:var(--muted);font-weight:500;}
+.poseur-bars{display:flex;flex-direction:column;gap:8px;}
+.bar-row{display:flex;align-items:center;gap:8px;}
+.bar-label{font-size:11px;font-family:'Montserrat',sans-serif;font-weight:700;width:60px;flex-shrink:0;}
+.bar-track{flex:1;background:var(--surface2);border-radius:4px;height:10px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.bar-count{font-size:12px;font-weight:700;width:28px;text-align:right;flex-shrink:0;}
+.bar-fill.pose{background:var(--pose);}
+.bar-fill.depose{background:var(--depose);}
+.bar-fill.film{background:var(--film);}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
 .gest-item{background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);}
 .gest-item.editing{border-color:var(--yellow);}
@@ -363,6 +379,7 @@ body.light .depot-btn.active{color:var(--gray);}
   <div class="tabs" id="tabsBar">
     <div class="tab active" onclick="showTab('capture',this)">📷 CAPTURE</div>
     <div class="tab" onclick="showTab('history',this)">👥 ÉQUIPE</div>
+    <div class="tab" id="dashTab" style="display:none" onclick="showTab('dashboard',this)">📈 STATS</div>
     <div class="tab admin-tab" onclick="showTab('gestion',this)">✏️ GESTION</div>
     <div class="tab admin-tab" onclick="showTab('export',this)">📊 RAPPORT</div>
     <div class="tab admin-tab" onclick="showTab('settings',this)">⚙️ CONFIG</div>
@@ -433,6 +450,26 @@ body.light .depot-btn.active{color:var(--gray);}
     <div id="histList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
   </div>
 
+
+
+  <!-- DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">PERFORMANCE PAR POSEUR</div>
+      <div id="dashboardContent"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">FILTRER PAR DATE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label class="lbl">DÉBUT</label>
+          <input type="date" id="dashFrom" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;" onchange="renderDashboard()"/>
+        </div>
+        <div><label class="lbl">FIN</label>
+          <input type="date" id="dashTo" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-family:Inter,sans-serif;font-size:13px;outline:none;" onchange="renderDashboard()"/>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- GESTION -->
   <div class="page" id="page-gestion">
@@ -549,12 +586,15 @@ async function doLogin(){
     '1001':'Yassin','1002':'Hamza','1003':'Othmane','1004':'Chouaib',
     '1005':'Azize','1006':'Rachid','1007':'Adil','1008':'Hamid','1009':'Azlag'
   };
+  // Chef role: Azize
+  var chefCodes = { '1005': 'Azize' };
 
   // Merge with any Firebase-updated codes
   var allCodes = Object.assign({}, localCodes, (_cfg && _cfg.poseurCodes ? _cfg.poseurCodes : {}));
 
   if(allCodes[code]){
-    _currentUser = { name:allCodes[code], role:'equipe' };
+    var role = chefCodes[code] ? 'chef' : 'equipe';
+    _currentUser = { name:allCodes[code], role:role };
     loginSuccess();
     return;
   }
@@ -673,6 +713,7 @@ async function init(){
     if(document.getElementById('page-history').classList.contains('active')) renderHistory();
     if(document.getElementById('page-export').classList.contains('active')) renderStats();
     if(document.getElementById('page-gestion') && document.getElementById('page-gestion').classList.contains('active')) renderGestion();
+    if(document.getElementById('page-dashboard') && document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
   });
 }
 
@@ -683,6 +724,75 @@ async function saveConfig(){
   }catch(e){ console.warn('Save config error:', e); }
 }
 
+
+
+// ══ DASHBOARD ══
+function renderDashboard(){
+  var from = document.getElementById('dashFrom') ? document.getElementById('dashFrom').value : '';
+  var to = document.getElementById('dashTo') ? document.getElementById('dashTo').value : '';
+
+  var records = _records.filter(function(r){
+    if(!from && !to) return true;
+    var d = parseDate(r.date);
+    if(!d) return false;
+    if(from){ var f=parseDateInput(from); if(d<f) return false; }
+    if(to){ var t=parseDateInput(to); if(d>t) return false; }
+    return true;
+  });
+
+  // Group by poseur
+  var poseurs = {};
+  records.forEach(function(r){
+    var p = r.poseur || '—';
+    if(!poseurs[p]) poseurs[p] = {pose:0, depose:0, film:0, total:0};
+    if(r.action==='POSE') poseurs[p].pose++;
+    else if(r.action==='DEPOSE') poseurs[p].depose++;
+    else if(r.action==='FILM') poseurs[p].film++;
+    poseurs[p].total++;
+  });
+
+  var div = document.getElementById('dashboardContent');
+  if(!div) return;
+
+  var sorted = Object.keys(poseurs).sort(function(a,b){ return poseurs[b].total - poseurs[a].total; });
+
+  if(!sorted.length){
+    div.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">AUCUNE DONNÉE</div></div>';
+    return;
+  }
+
+  var maxTotal = Math.max.apply(null, sorted.map(function(p){ return poseurs[p].total; }));
+
+  div.innerHTML = sorted.map(function(p){
+    var s = poseurs[p];
+    var poseW = maxTotal>0 ? Math.round(s.pose/maxTotal*100) : 0;
+    var deposeW = maxTotal>0 ? Math.round(s.depose/maxTotal*100) : 0;
+    var filmW = maxTotal>0 ? Math.round(s.film/maxTotal*100) : 0;
+    return '<div class="poseur-card">'+
+      '<div class="poseur-name">'+
+        '<span>👷 '+p+'</span>'+
+        '<span class="poseur-total">'+s.total+' total</span>'+
+      '</div>'+
+      '<div class="poseur-bars">'+
+        '<div class="bar-row">'+
+          '<span class="bar-label" style="color:var(--pose)">🖼️ POSE</span>'+
+          '<div class="bar-track"><div class="bar-fill pose" style="width:'+poseW+'%"></div></div>'+
+          '<span class="bar-count" style="color:var(--pose)">'+s.pose+'</span>'+
+        '</div>'+
+        '<div class="bar-row">'+
+          '<span class="bar-label" style="color:var(--depose)">🗑️ DPOSE</span>'+
+          '<div class="bar-track"><div class="bar-fill depose" style="width:'+deposeW+'%"></div></div>'+
+          '<span class="bar-count" style="color:var(--depose)">'+s.depose+'</span>'+
+        '</div>'+
+        '<div class="bar-row">'+
+          '<span class="bar-label" style="color:var(--film)">🛡️ FILM</span>'+
+          '<div class="bar-track"><div class="bar-fill film" style="width:'+filmW+'%"></div></div>'+
+          '<span class="bar-count" style="color:var(--film)">'+s.film+'</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
 
 // ══ GESTION ══
 var _gestionFilter = '';
@@ -768,6 +878,7 @@ function showTab(tab, el){
   closeAllDropdowns();
   if(tab==='history'){ _histFilter.date=getTodayStr(); updateDateDisplay(); renderHistory(); }
   if(tab==='gestion') renderGestion();
+  if(tab==='dashboard') renderDashboard();
   if(tab==='export') renderStats();
   if(tab==='settings') renderSettings();
 }
