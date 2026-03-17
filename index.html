@@ -7,6 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 <meta name="theme-color" content="#FDDD00"/>
 <title>CasaBus Tracker</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -485,8 +489,15 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <div class="card-title" data-i18n="informations">INFORMATIONS</div>
       <div class="field">
         <label class="lbl" data-i18n="nbus">N° BUS</label>
-        <input type="number" id="busNum" placeholder="Ex: 42000" maxlength="5" oninput="validateBus(this);updatePreview()"/>
-      <span id="busHint" style="font-size:11px;margin-top:4px;display:block;height:14px;font-family:Montserrat,sans-serif;padding-left:4px;"></span>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <div style="flex:1;">
+            <input type="number" id="busNum" placeholder="Ex: 42000" maxlength="5" oninput="validateBus(this);updatePreview()" style="width:100%;"/>
+            <span id="busHint" style="font-size:11px;margin-top:4px;display:block;height:14px;font-family:Montserrat,sans-serif;padding-left:4px;"></span>
+          </div>
+          <button onclick="startQRScanner()" title="Scanner QR Code" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--yellow);cursor:pointer;font-size:20px;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
+          </button>
+        </div>
       </div>
       <div class="field"><label class="lbl" data-i18n="campagne">CAMPAGNE</label><div class="sd-wrap" id="sd-campagne"></div></div>
       <div class="field">
@@ -629,6 +640,8 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <button class="export-btn" onclick="exportExcelWithImages()"><span>🖼️</span> Exporter Excel + Photos</button>
       <button class="export-btn" onclick="exportExcelWithLinks()"><span>📊</span> Exporter Excel + liens Drive</button>
       <button class="export-btn" onclick="exportCSV()"><span>📄</span> Exporter CSV simple</button>
+      <button class="export-btn" onclick="exportPDF()" style="background:rgba(229,57,53,0.1);border-color:#e53935;color:#e53935;"><span>📄</span> Exporter PDF</button>
+      <button class="export-btn" onclick="openDashboard()" style="background:rgba(41,121,255,0.1);border-color:var(--film);color:var(--film);"><span>📈</span> Dashboard Statistiques</button>
     </div>
   </div>
 
@@ -941,6 +954,177 @@ function renderDashboard(){
 
 
 
+
+
+
+// ══ DASHBOARD CHARTS ══
+var _charts = {};
+
+function openDashboard(){
+  document.getElementById('dashboardModal').style.display = 'block';
+  setTimeout(renderCharts, 100);
+}
+
+function closeDashboard(){
+  document.getElementById('dashboardModal').style.display = 'none';
+  Object.values(_charts).forEach(function(c){ if(c) c.destroy(); });
+  _charts = {};
+}
+
+function renderCharts(){
+  var records = _records;
+  if(!records.length){ showToast('Aucune donnée'); closeDashboard(); return; }
+
+  // Destroy old charts
+  Object.values(_charts).forEach(function(c){ if(c) c.destroy(); });
+
+  // Chart 1: Actions pie
+  var pose = records.filter(function(r){ return r.action==='POSE'; }).length;
+  var depose = records.filter(function(r){ return r.action==='DEPOSE'; }).length;
+  var film = records.filter(function(r){ return r.action==='FILM'; }).length;
+
+  var ctx1 = document.getElementById('actionsChart').getContext('2d');
+  _charts.actions = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['POSE', 'DEPOSE', 'FILM'],
+      datasets: [{ data: [pose, depose, film], backgroundColor: ['#00e676','#ff6600','#2979ff'], borderWidth: 0 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { labels: { color:'#aaa', font:{family:'Montserrat',weight:'700'} } } }
+    }
+  });
+
+  // Chart 2: Depots bar
+  var depots = {};
+  records.forEach(function(r){ if(r.depot) depots[r.depot] = (depots[r.depot]||0)+1; });
+  var ctx2 = document.getElementById('depotsChart').getContext('2d');
+  _charts.depots = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(depots),
+      datasets: [{ label:'Interventions', data: Object.values(depots),
+        backgroundColor: '#FDDD00', borderRadius: 6 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins: { legend: { display:false } },
+      scales: { x: { ticks:{color:'#aaa'}, grid:{color:'#333'} }, y: { ticks:{color:'#aaa'}, grid:{color:'#333'} } }
+    }
+  });
+
+  // Chart 3: Poseur bar
+  var poseurs = {};
+  records.forEach(function(r){ if(r.poseur) poseurs[r.poseur] = (poseurs[r.poseur]||0)+1; });
+  var ctx3 = document.getElementById('poseurChart').getContext('2d');
+  _charts.poseur = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(poseurs),
+      datasets: [{ label:'Actions', data: Object.values(poseurs),
+        backgroundColor: '#2979ff', borderRadius: 6 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { display:false } },
+      scales: { x: { ticks:{color:'#aaa'}, grid:{color:'#333'} }, y: { ticks:{color:'#aaa'}, grid:{color:'#333'} } }
+    }
+  });
+}
+
+// ══ PDF EXPORT ══
+function exportPDF(){
+  if(!window.jspdf){ showToast('⏳ Chargement PDF...'); return; }
+  var records = _records;
+  if(!records.length){ showToast('Aucune donnée'); return; }
+
+  var { jsPDF } = window.jspdf;
+  var doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  // Header
+  doc.setFillColor(83,87,90);
+  doc.rect(0,0,210,30,'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.setTextColor(253,221,0);
+  doc.text('CasaBus Tracker', 14, 14);
+  doc.setFontSize(10);
+  doc.setTextColor(200,200,200);
+  doc.text('Rapport Export — ' + new Date().toLocaleDateString('fr-FR'), 14, 22);
+
+  // Stats
+  var pose = records.filter(function(r){ return r.action==='POSE'; }).length;
+  var depose = records.filter(function(r){ return r.action==='DEPOSE'; }).length;
+  var film = records.filter(function(r){ return r.action==='FILM'; }).length;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.setTextColor(50,50,50);
+  doc.text('Total: '+records.length+' | POSE: '+pose+' | DEPOSE: '+depose+' | FILM: '+film, 14, 38);
+
+  // Table
+  var rows = records.map(function(r){
+    return [r.bus||'', r.action||'', r.campagne||'', r.depot||'', r.poseur||'', r.date||'', r.time||''];
+  });
+
+  doc.autoTable({
+    startY: 44,
+    head: [['N°Bus','Action','Campagne','Dépôt','Poseur','Date','Heure']],
+    body: rows,
+    styles: { fontSize:9, cellPadding:3 },
+    headStyles: { fillColor:[83,87,90], textColor:[253,221,0], fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[248,248,248] },
+    didDrawCell: function(data){
+      if(data.section==='body' && data.column.index===1){
+        var action = data.cell.raw;
+        if(action==='POSE') doc.setTextColor(0,150,80);
+        else if(action==='DEPOSE') doc.setTextColor(200,80,0);
+        else if(action==='FILM') doc.setTextColor(30,100,220);
+      }
+    }
+  });
+
+  doc.save('rapport_casabus_'+getDate()+'.pdf');
+  showToast('✅ PDF téléchargé!');
+}
+
+// ══ QR SCANNER ══
+var _qrScanner = null;
+
+function startQRScanner(){
+  var modal = document.getElementById('qrModal');
+  modal.style.display = 'flex';
+  
+  _qrScanner = new Html5Qrcode('qr-reader');
+  _qrScanner.start(
+    {facingMode:'environment'},
+    {fps:10, qrbox:{width:220, height:220}},
+    function(decodedText){
+      stopQRScanner();
+      var nums = decodedText.replace(/\D/g,'');
+      if(nums.length >= 4){
+        var busNum = nums.slice(-5).padStart(5,'0');
+        document.getElementById('busNum').value = busNum;
+        validateBus(document.getElementById('busNum'));
+        updatePreview();
+        showToast('✅ Bus ' + busNum + ' scanné!');
+      } else {
+        showToast('⚠️ QR invalide');
+      }
+    },
+    function(err){}
+  ).catch(function(err){
+    showToast('❌ Caméra non accessible');
+    stopQRScanner();
+  });
+}
+
+function stopQRScanner(){
+  if(_qrScanner){
+    _qrScanner.stop().catch(function(){});
+    _qrScanner.clear();
+    _qrScanner = null;
+  }
+  document.getElementById('qrModal').style.display = 'none';
+}
 
 // ══ PHOTO VIEWER ══
 function openPhotoViewer(src, fullUrl){
@@ -1884,6 +2068,17 @@ function validateBus(input){
 }
 function pad(n){return String(parseInt(n)||0).padStart(5,'0');}
 function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');}
+
+function getGPS(){
+  return new Promise(function(resolve){
+    if(!navigator.geolocation){ resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ resolve({lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy)}); },
+      function(){ resolve(null); },
+      {enableHighAccuracy:true, timeout:5000, maximumAge:0}
+    );
+  });
+}
 function buildFileName(){
   const bus=document.getElementById('busNum').value.trim();
   const camp=_sdValues.campagne;
@@ -2114,6 +2309,7 @@ function renderHistory(){
         </div>
         <div class="hist-fname">${r.campagne||''}${r.depot?' · '+r.depot:''}</div>
         ${(isAdmin||isChef) ? `<div class="hist-meta" style="color:#FDDD00;font-weight:600;">👷 ${r.poseur||'—'}</div>` : ''}
+        ${r.location && r.location.lat ? `<div class="hist-meta" style="font-size:10px;color:#888;"><a href="https://maps.google.com/?q=${r.location.lat},${r.location.lng}" target="_blank" style="color:#4285f4;text-decoration:none;">📍 ${r.location.lat.toFixed(4)},${r.location.lng.toFixed(4)} (±${r.location.acc||'?'}m)</a></div>` : ''}
         <div class="hist-meta" style="font-size:10px;color:${hasPhoto?'#4caf50':'#e53935'};">${hasPhoto?'📸 Photo disponible':'📷 Pas de photo'}</div>
       </div>
       <div class="hist-actions">
@@ -2402,6 +2598,66 @@ function showToast(msg){
       <button onclick="closePhotoViewer()" style="padding:10px 20px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">✕ Fermer</button>
     </div>
     <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;">Cliquez n'importe où pour fermer</div>
+  </div>
+
+  
+  <!-- DASHBOARD MODAL -->
+  <div id="dashboardModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:3000;overflow-y:auto;padding:16px;padding-bottom:100px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:var(--yellow);">📈 STATISTIQUES</div>
+      <button onclick="closeDashboard()" style="background:#e53935;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">✕</button>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">RÉPARTITION DES ACTIONS</div>
+      <div style="position:relative;height:220px;"><canvas id="actionsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">INTERVENTIONS PAR DÉPÔT</div>
+      <div style="position:relative;height:220px;"><canvas id="depotsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">ACTIVITÉ PAR POSEUR</div>
+      <div style="position:relative;height:220px;"><canvas id="poseurChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="width:90%;max-width:380px;background:var(--surface);border-radius:16px;padding:20px;overflow:hidden;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">📷 SCANNER QR CODE</div>
+      <div id="qr-reader" style="width:100%;border-radius:10px;overflow:hidden;"></div>
+      <button onclick="stopQRScanner()" style="width:100%;margin-top:14px;padding:12px;background:#e53935;color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">✕ FERMER</button>
+    </div>
+  </div>
+
+  
+  <!-- DASHBOARD MODAL -->
+  <div id="dashboardModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:3000;overflow-y:auto;padding:16px;padding-bottom:100px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:var(--yellow);">📈 STATISTIQUES</div>
+      <button onclick="closeDashboard()" style="background:#e53935;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">✕</button>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">RÉPARTITION DES ACTIONS</div>
+      <div style="position:relative;height:220px;"><canvas id="actionsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">INTERVENTIONS PAR DÉPÔT</div>
+      <div style="position:relative;height:220px;"><canvas id="depotsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">ACTIVITÉ PAR POSEUR</div>
+      <div style="position:relative;height:220px;"><canvas id="poseurChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="width:90%;max-width:380px;background:var(--surface);border-radius:16px;padding:20px;overflow:hidden;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">📷 SCANNER QR CODE</div>
+      <div id="qr-reader" style="width:100%;border-radius:10px;overflow:hidden;"></div>
+      <button onclick="stopQRScanner()" style="width:100%;margin-top:14px;padding:12px;background:#e53935;color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">✕ FERMER</button>
+    </div>
   </div>
 </body>
 </html>
