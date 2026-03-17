@@ -778,6 +778,8 @@ function loginSuccess(){
   }
   // admin: show everything
   init();
+  // Request GPS permission proactively
+  setTimeout(requestGPSPermission, 1000);
 }
 
 // ══ GOOGLE DRIVE SCRIPT ══
@@ -1167,10 +1169,25 @@ async function captureOCR(){
   document.getElementById('ocrCaptureBtn').disabled = true;
   
   try {
+    // Preprocess canvas: increase contrast for yellow on gray
+    var ctx = canvas.getContext('2d');
+    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = imgData.data;
+    // Convert to high contrast B&W - yellow (high R+G, low B) → black on white
+    for(var i=0; i<data.length; i+=4){
+      var r=data[i], g=data[i+1], b=data[i+2];
+      // Yellow pixels → black (text), everything else → white (background)
+      var isYellow = r > 150 && g > 120 && b < 100;
+      var val = isYellow ? 0 : 255;
+      data[i]=data[i+1]=data[i+2]=val;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    
     var result = await Tesseract.recognize(canvas, 'eng', {
       logger: function(m){},
       tessedit_char_whitelist: '0123456789',
-      tessedit_pageseg_mode: '7'
+      tessedit_pageseg_mode: '7',
+      tessedit_ocr_engine_mode: '1'
     });
     
     var text = result.data.text.replace(/\D/g,'').trim();
@@ -2222,12 +2239,41 @@ function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFu
 function getGPS(){
   return new Promise(function(resolve){
     if(!navigator.geolocation){ resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      function(pos){ resolve({lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy)}); },
-      function(){ resolve(null); },
-      {enableHighAccuracy:true, timeout:5000, maximumAge:0}
-    );
+    // Check permission first if API available
+    if(navigator.permissions){
+      navigator.permissions.query({name:'geolocation'}).then(function(perm){
+        if(perm.state === 'denied'){
+          resolve(null); return;
+        }
+        _doGetGPS(resolve);
+      }).catch(function(){ _doGetGPS(resolve); });
+    } else {
+      _doGetGPS(resolve);
+    }
   });
+}
+
+function _doGetGPS(resolve){
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ 
+      resolve({lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy)}); 
+    },
+    function(err){ 
+      console.log('GPS error:', err.code, err.message);
+      resolve(null); 
+    },
+    {enableHighAccuracy:true, timeout:8000, maximumAge:30000}
+  );
+}
+
+// Request GPS permission proactively on login
+function requestGPSPermission(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ console.log('GPS ready:', pos.coords.latitude, pos.coords.longitude); },
+    function(err){ console.log('GPS denied:', err.message); },
+    {enableHighAccuracy:false, timeout:5000}
+  );
 }
 function buildFileName(){
   const bus=document.getElementById('busNum').value.trim();
