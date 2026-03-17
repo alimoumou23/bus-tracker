@@ -770,7 +770,7 @@ async function doLogin(){
 function loginSuccess(){
   loadTheme();
   // Save session
-  localStorage.setItem('session', JSON.stringify(_currentUser));
+  localStorage.setItem('bustrack_session', JSON.stringify(_currentUser));
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
@@ -2245,6 +2245,29 @@ function loadTheme(){
     if(thumb) thumb.textContent = '☀️';
   }
 }
+
+// Auto-login on page load
+(function(){
+  var savedLang = localStorage.getItem('lang');
+  if(savedLang === 'ar'){
+    _lang = 'ar';
+    document.body.classList.add('lang-ar');
+    var lthumb = document.getElementById('langThumb');
+    if(lthumb) lthumb.textContent = 'AR';
+  }
+  var savedSession = localStorage.getItem('bustrack_session');
+  if(savedSession){
+    try {
+      var user = JSON.parse(savedSession);
+      if(user && user.name && user.role){
+        _currentUser = user;
+        loginSuccess();
+      }
+    } catch(e){
+      localStorage.removeItem('bustrack_session');
+    }
+  }
+})();
 
 // ══ ACTION ══
 function setAction(a){
