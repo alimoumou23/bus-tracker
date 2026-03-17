@@ -85,7 +85,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .login-err{color:#e53935;font-size:12px;text-align:center;margin-top:10px;letter-spacing:1px;display:none;}
 
 /* ── APP ── */
-.header.hidden{transform:translateY(-100%);}
 .tabs.hidden{transform:translateY(100%);}
 .header{
   background:var(--yellow);border-bottom:3px solid var(--gray);
@@ -1971,22 +1970,18 @@ async function saveQuickEdit(id){
 
 
 
-// ══ HIDE HEADER + TABS ON SCROLL ══
+// ══ HIDE BOTTOM TABS ON SCROLL (header always visible) ══
 (function(){
   var lastY = 0;
-  var header = null;
   var tabs = null;
   window.addEventListener('scroll', function(){
-    if(!header) header = document.querySelector('.header');
     if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
     if(y > lastY && y > 50){
-      // Scrolling DOWN → hide
-      if(header) header.classList.add('hidden');
+      // Scrolling DOWN → hide bottom tabs
       if(tabs) tabs.classList.add('hidden');
     } else if(y < lastY){
-      // Scrolling UP → show immediately
-      if(header) header.classList.remove('hidden');
+      // Scrolling UP → show bottom tabs immediately
       if(tabs) tabs.classList.remove('hidden');
     }
     lastY = y;
