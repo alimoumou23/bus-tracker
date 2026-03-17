@@ -1144,12 +1144,27 @@ function startQRScanner(){
 }
 
 function stopQRScanner(){
-  if(_qrScanner){
-    _qrScanner.stop().catch(function(){});
-    _qrScanner.clear();
-    _qrScanner = null;
-  }
   document.getElementById('qrModal').style.display = 'none';
+  if(_qrScanner){
+    var scanner = _qrScanner;
+    _qrScanner = null;
+    try {
+      if(scanner.isScanning){
+        scanner.stop().then(function(){
+          scanner.clear();
+        }).catch(function(){
+          try{ scanner.clear(); }catch(e){}
+        });
+      } else {
+        try{ scanner.clear(); }catch(e){}
+      }
+    } catch(e){
+      try{ scanner.clear(); }catch(e2){}
+    }
+  }
+  // Force clear the reader div
+  var reader = document.getElementById('qr-reader');
+  if(reader) reader.innerHTML = '';
 }
 
 // ══ PHOTO VIEWER ══
