@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#FDDD00"/>
 <title>CasaBus Tracker</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -494,8 +495,8 @@ body.lang-ar .lbl { letter-spacing: 0; }
             <input type="number" id="busNum" placeholder="Ex: 42000" maxlength="5" oninput="validateBus(this);updatePreview()" style="width:100%;"/>
             <span id="busHint" style="font-size:11px;margin-top:4px;display:block;height:14px;font-family:Montserrat,sans-serif;padding-left:4px;"></span>
           </div>
-          <button onclick="startQRScanner()" title="Scanner QR Code" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--yellow);cursor:pointer;font-size:20px;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
+          <button onclick="startOCRScan()" title="Scanner le numéro" style="background:var(--surface2);border:1.5px solid var(--yellow);border-radius:10px;padding:12px 14px;color:var(--yellow);cursor:pointer;font-size:18px;flex-shrink:0;-webkit-tap-highlight-color:transparent;font-family:Montserrat,sans-serif;font-weight:800;">
+            👁️
           </button>
         </div>
       </div>
@@ -1095,6 +1096,102 @@ function exportPDF(){
 
   doc.save('rapport_casabus_'+getDate()+'.pdf');
   showToast('✅ PDF téléchargé!');
+}
+
+
+// ══ OCR NUMBER SCANNER ══
+var _ocrStream = null;
+var _ocrDetectedNum = '';
+
+async function startOCRScan(){
+  var modal = document.getElementById('ocrModal');
+  modal.style.display = 'flex';
+  document.getElementById('ocrResult').style.display = 'none';
+  document.getElementById('ocrStatus').textContent = 'Démarrage caméra...';
+  
+  try {
+    _ocrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }
+    });
+    var video = document.getElementById('ocrVideo');
+    video.srcObject = _ocrStream;
+    video.onloadedmetadata = function(){ video.play(); };
+    document.getElementById('ocrStatus').textContent = 'Cadrez le numéro dans le rectangle jaune';
+  } catch(err){
+    document.getElementById('ocrStatus').textContent = '❌ Caméra non accessible';
+    showToast('❌ ' + err.message);
+  }
+}
+
+function stopOCRScan(){
+  if(_ocrStream){
+    _ocrStream.getTracks().forEach(function(t){ t.stop(); });
+    _ocrStream = null;
+  }
+  var video = document.getElementById('ocrVideo');
+  video.srcObject = null;
+  document.getElementById('ocrModal').style.display = 'none';
+  document.getElementById('ocrResult').style.display = 'none';
+}
+
+async function captureOCR(){
+  var video = document.getElementById('ocrVideo');
+  var canvas = document.getElementById('ocrCanvas');
+  
+  if(!video.videoWidth){ showToast('⏳ Caméra pas prête'); return; }
+  
+  // Capture the yellow rectangle area (center 80% width, middle 100px zone)
+  var vw = video.videoWidth, vh = video.videoHeight;
+  var cropX = Math.round(vw * 0.05);
+  var cropW = Math.round(vw * 0.90);
+  var cropH = Math.round(vh * 0.35);
+  var cropY = Math.round((vh - cropH) / 2);
+  
+  canvas.width = cropW;
+  canvas.height = cropH;
+  canvas.getContext('2d').drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  
+  document.getElementById('ocrStatus').textContent = '🔍 Analyse en cours...';
+  document.getElementById('ocrCaptureBtn').disabled = true;
+  
+  try {
+    var result = await Tesseract.recognize(canvas, 'eng', {
+      logger: function(m){},
+      tessedit_char_whitelist: '0123456789',
+      tessedit_pageseg_mode: '7'
+    });
+    
+    var text = result.data.text.replace(/\D/g,'').trim();
+    console.log('OCR raw:', result.data.text, 'cleaned:', text);
+    
+    if(text.length >= 3){
+      var busNum = text.length >= 5 ? text.slice(0,5) : text.padStart(5,'0');
+      _ocrDetectedNum = busNum;
+      document.getElementById('ocrResultNum').textContent = busNum;
+      document.getElementById('ocrResult').style.display = 'block';
+      document.getElementById('ocrStatus').textContent = '';
+    } else {
+      document.getElementById('ocrStatus').textContent = '⚠️ Numéro non détecté — réessayez';
+    }
+  } catch(err){
+    document.getElementById('ocrStatus').textContent = '❌ Erreur OCR: ' + err.message;
+  }
+  document.getElementById('ocrCaptureBtn').disabled = false;
+}
+
+function retryOCR(){
+  document.getElementById('ocrResult').style.display = 'none';
+  document.getElementById('ocrStatus').textContent = 'Cadrez le numéro dans le rectangle jaune';
+  _ocrDetectedNum = '';
+}
+
+function confirmOCR(){
+  if(!_ocrDetectedNum){ return; }
+  document.getElementById('busNum').value = _ocrDetectedNum;
+  validateBus(document.getElementById('busNum'));
+  updatePreview();
+  stopOCRScan();
+  showToast('✅ Bus ' + _ocrDetectedNum + ' détecté!');
 }
 
 // ══ QR SCANNER ══
@@ -2662,6 +2759,40 @@ function showToast(msg){
     </div>
   </div>
 
+  
+  <!-- OCR SCAN MODAL -->
+  <div id="ocrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:3000;flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">👁️ SCANNER LE NUMÉRO</div>
+      
+      <!-- Live camera preview -->
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px;">
+        <video id="ocrVideo" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;"></video>
+        <!-- Target overlay -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="width:80%;height:100px;border:3px solid var(--yellow);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4);"></div>
+        </div>
+      </div>
+      
+      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px;font-family:Montserrat,sans-serif;min-height:20px;">Cadrez le numéro dans le rectangle</div>
+      
+      <div id="ocrResult" style="display:none;background:var(--surface);border:2px solid var(--yellow);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);font-family:Montserrat,sans-serif;margin-bottom:6px;">NUMÉRO DÉTECTÉ</div>
+        <div id="ocrResultNum" style="font-size:36px;font-weight:900;color:var(--yellow);font-family:Montserrat,sans-serif;letter-spacing:4px;"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button onclick="confirmOCR()" style="flex:1;padding:12px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;">✅ CONFIRMER</button>
+          <button onclick="retryOCR()" style="flex:1;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer;">🔄 RÉESSAYER</button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;">
+        <button id="ocrCaptureBtn" onclick="captureOCR()" style="flex:1;padding:14px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">📸 CAPTURER</button>
+        <button onclick="stopOCRScan()" style="padding:14px 18px;background:#e53935;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">✕</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="ocrCanvas" style="display:none;"></canvas>
+
   <!-- QR SCANNER MODAL -->
   <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
     <div style="width:90%;max-width:380px;background:var(--surface);border-radius:16px;padding:20px;overflow:hidden;">
@@ -2691,6 +2822,40 @@ function showToast(msg){
       <div style="position:relative;height:220px;"><canvas id="poseurChart"></canvas></div>
     </div>
   </div>
+
+  
+  <!-- OCR SCAN MODAL -->
+  <div id="ocrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:3000;flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">👁️ SCANNER LE NUMÉRO</div>
+      
+      <!-- Live camera preview -->
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px;">
+        <video id="ocrVideo" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;"></video>
+        <!-- Target overlay -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="width:80%;height:100px;border:3px solid var(--yellow);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4);"></div>
+        </div>
+      </div>
+      
+      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px;font-family:Montserrat,sans-serif;min-height:20px;">Cadrez le numéro dans le rectangle</div>
+      
+      <div id="ocrResult" style="display:none;background:var(--surface);border:2px solid var(--yellow);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);font-family:Montserrat,sans-serif;margin-bottom:6px;">NUMÉRO DÉTECTÉ</div>
+        <div id="ocrResultNum" style="font-size:36px;font-weight:900;color:var(--yellow);font-family:Montserrat,sans-serif;letter-spacing:4px;"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button onclick="confirmOCR()" style="flex:1;padding:12px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;">✅ CONFIRMER</button>
+          <button onclick="retryOCR()" style="flex:1;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer;">🔄 RÉESSAYER</button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;">
+        <button id="ocrCaptureBtn" onclick="captureOCR()" style="flex:1;padding:14px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">📸 CAPTURER</button>
+        <button onclick="stopOCRScan()" style="padding:14px 18px;background:#e53935;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">✕</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="ocrCanvas" style="display:none;"></canvas>
 
   <!-- QR SCANNER MODAL -->
   <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
