@@ -1970,17 +1970,17 @@ async function saveQuickEdit(id){
 
 
 
-// ══ TABS: hide on scroll down, show only at TOP ══
+// ══ TABS: hide on scroll down, show on scroll up ══
 (function(){
   var lastY = 0;
   var tabs = null;
   window.addEventListener('scroll', function(){
     if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
-    if(y > 10){
-      if(tabs) tabs.classList.add('hidden');
-    } else {
-      if(tabs) tabs.classList.remove('hidden');
+    if(y > lastY && y > 50){
+      if(tabs) tabs.classList.add('hidden');    // scroll down → hide
+    } else if(y < lastY){
+      if(tabs) tabs.classList.remove('hidden'); // scroll up → show
     }
     lastY = y;
   }, {passive:true});
