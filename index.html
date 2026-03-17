@@ -1977,10 +1977,10 @@ async function saveQuickEdit(id){
     if(!header) header = document.querySelector('.header');
     if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
-    if(y > lastY && y > 60){
+    if(y > lastY && y > 10){
       if(header) header.classList.add('hidden');
       if(tabs) tabs.classList.add('hidden');
-    } else {
+    } else if(y < lastY){
       if(header) header.classList.remove('hidden');
       if(tabs) tabs.classList.remove('hidden');
     }
