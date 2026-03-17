@@ -941,6 +941,21 @@ function renderDashboard(){
 
 
 
+
+// ══ JSONP HELPER ══
+function getFileIdJsonp(fileName, callback){
+  var cbName = 'cb_'+Date.now();
+  window[cbName] = function(data){
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    callback(data && data.fileId ? data.fileId : null);
+  };
+  var script = document.createElement('script');
+  script.src = DRIVE_SCRIPT_URL + '?fn=' + encodeURIComponent(fileName) + '&callback=' + cbName;
+  script.onerror = function(){ callback(null); };
+  document.head.appendChild(script);
+}
+
 // ══ PHOTO VIEWER ══
 function openPhotoViewer(src, fullUrl){
   // If we have a Drive link, open it directly (no memory crash)
