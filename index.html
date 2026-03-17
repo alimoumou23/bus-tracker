@@ -86,7 +86,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 
 /* ── APP ── */
 .tabs.hidden{transform:translateY(100%);}
-.header.hidden{transform:translateY(-100%);}
 .header{
   background:var(--yellow);border-bottom:3px solid var(--gray);
   padding:12px 16px;display:flex;align-items:center;
@@ -1971,17 +1970,17 @@ async function saveQuickEdit(id){
 
 
 
-// ══ HEADER HIDES ON SCROLL DOWN, SHOWS ON SCROLL UP ══
+// ══ TABS: hide on scroll down, show only at TOP ══
 (function(){
   var lastY = 0;
-  var header = null;
+  var tabs = null;
   window.addEventListener('scroll', function(){
-    if(!header) header = document.querySelector('.header');
+    if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
-    if(y > lastY && y > 50){
-      if(header) header.classList.add('hidden');
-    } else if(y < lastY){
-      if(header) header.classList.remove('hidden');
+    if(y > 10){
+      if(tabs) tabs.classList.add('hidden');
+    } else {
+      if(tabs) tabs.classList.remove('hidden');
     }
     lastY = y;
   }, {passive:true});
