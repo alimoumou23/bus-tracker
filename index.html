@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
@@ -1721,4 +1720,1250 @@ function generateExcelHTML(records, filename){
       + '<th>Photo</th><th>Lien Drive</th>'
       + '</tr>'
       + tableRows
-      + '</table></body></html>
+      + '</table></body></html>';
+
+    var blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename+'.xls';
+    a.click();
+    showToast('✅ Excel avec photos téléchargé!');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
+
+// ══ EXPORT EXCEL AVEC LIENS DRIVE ══
+function buildExcelData(records){
+  // Headers
+  var wsData = [
+    ['N° Bus','Action','Campagne','Dépôt','Poseur','Fichier','Date','Heure','Validation (lien Drive)']
+  ];
+
+  records.forEach(function(r){
+    var driveLink = r.driveUrl || r.photoURL || '';
+    // If photoURL is a Drive URL keep it, if base64 ignore it
+    if(driveLink.startsWith('data:')) driveLink = '';
+    wsData.push([
+      r.bus, r.action, r.campagne||'', r.depot||'',
+      r.poseur||'', r.fileName||'', r.date||'', r.time||'',
+      driveLink ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}} : '—'
+    ]);
+  });
+  return wsData;
+}
+
+function exportExcelWithLinks(){
+  if(!_records.length) return showToast('Aucune donnée');
+  generateExcel(_records, 'rapport_complet_casabus');
+}
+
+function exportExcelFiltered(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune donnée pour cette période');
+  var from = document.getElementById('dateFrom').value || 'debut';
+  var to   = document.getElementById('dateTo').value   || 'fin';
+  generateExcel(records, 'rapport_'+from+'_au_'+to);
+}
+
+function generateExcel(records, filename){
+  try {
+    var wsData = buildExcelData(records);
+
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [
+      {wch:8},{wch:10},{wch:18},{wch:14},{wch:12},
+      {wch:35},{wch:12},{wch:10},{wch:20}
+    ];
+
+    // Style header row
+    var headerStyle = {
+      font:{bold:true, color:{rgb:'FFFFFF'}},
+      fill:{fgColor:{rgb:'53575A'}},
+      alignment:{horizontal:'center'}
+    };
+
+    // Apply header styles A1:I1
+    ['A','B','C','D','E','F','G','H','I'].forEach(function(col){
+      var cell = ws[col+'1'];
+      if(cell) cell.s = headerStyle;
+    });
+
+    // Style data rows with action colors
+    for(var i=2; i<=records.length+1; i++){
+      var action = ws['B'+i] ? ws['B'+i].v : '';
+      var color = action==='POSE' ? 'E8F5E9' : action==='DEPOSE' ? 'FFF3E0' : 'E3F2FD';
+      ['A','B','C','D','E','F','G','H'].forEach(function(col){
+        var cell = ws[col+i];
+        if(cell) cell.s = {fill:{fgColor:{rgb:color}}};
+      });
+      // Style link cell
+      var linkCell = ws['I'+i];
+      if(linkCell && linkCell.l) {
+        linkCell.s = {
+          font:{color:{rgb:'0000FF'}, underline:true},
+          alignment:{horizontal:'center'}
+        };
+      }
+    }
+
+    // Freeze header row
+    ws['!freeze'] = {xSplit:0, ySplit:1};
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Rapport CasaBus');
+
+    // Write file
+    XLSX.writeFile(wb, filename+'.xlsx', {bookType:'xlsx', type:'binary', cellStyles:true});
+    showToast('✅ Excel téléchargé avec liens Drive!');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+    console.error(e);
+  }
+}
+
+// ══ STATS PAR POSEUR ══
+function renderPoseurStats(){
+  var table = document.getElementById('poseurStatsTable');
+  if(!table) return;
+  
+  // Get all poseurs from records
+  var poseurSet = {};
+  _records.forEach(function(r){
+    var p = r.poseur || '—';
+    if(!poseurSet[p]) poseurSet[p] = {pose:0,depose:0,film:0,total:0};
+    poseurSet[p][r.action.toLowerCase()]++;
+    poseurSet[p].total++;
+  });
+  
+  if(!Object.keys(poseurSet).length){
+    table.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px;">Aucune donnée</div>';
+    return;
+  }
+  
+  // Sort by total desc
+  var sorted = Object.entries(poseurSet).sort(function(a,b){return b[1].total-a[1].total;});
+  
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr style="color:var(--muted);font-size:10px;letter-spacing:1px;border-bottom:1px solid var(--border);">';
+  html += '<th style="text-align:left;padding:6px 4px;">POSEUR</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--pose);">🖼️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--depose);">🗑️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--film);">🛡️</th>';
+  html += '<th style="text-align:center;padding:6px 4px;color:var(--yellow);">TOTAL</th>';
+  html += '</tr>';
+  
+  sorted.forEach(function(entry){
+    var name = entry[0];
+    var s = entry[1];
+    html += '<tr style="border-bottom:1px solid var(--border);">';
+    html += '<td style="padding:8px 4px;font-weight:600;">'+name+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--pose);">'+s.pose+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--depose);">'+s.depose+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;color:var(--film);">'+s.film+'</td>';
+    html += '<td style="text-align:center;padding:8px 4px;font-weight:700;color:var(--yellow);">'+s.total+'</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+  table.innerHTML = html;
+}
+
+
+// ══ QUICK EDIT IN ÉQUIPE ══
+function openQuickEdit(id){
+  var r = _records.find(function(x){ return x.id===id; });
+  if(!r) return;
+
+  // Remove existing modal if any
+  var old = document.getElementById('quickEditModal');
+  if(old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'quickEditModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border-radius:14px;padding:20px;width:100%;max-width:360px;border:2px solid var(--yellow);';
+
+  box.innerHTML =
+    '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;margin-bottom:16px;color:var(--yellow);">✏️ MODIFIER ENREGISTREMENT</div>' +
+
+    '<label class="lbl" data-i18n="nbus">N° BUS</label>' +
+    '<input type="number" id="qe-bus" value="'+parseInt(r.bus||0)+'" style="width:100%;background:var(--bg);border:1.5px solid var(--yellow);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
+
+    '<label class="lbl" data-i18n="action">ACTION</label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">' +
+      '<button class="qe-action-btn'+(r.action==='POSE'?' active':'')+'" data-val="POSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='POSE'?'var(--pose)':'var(--border)')+';background:'+(r.action==='POSE'?'rgba(0,230,118,0.15)':'var(--bg)')+';color:'+(r.action==='POSE'?'var(--pose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🖼️ POSE</button>' +
+      '<button class="qe-action-btn'+(r.action==='DEPOSE'?' active':'')+'" data-val="DEPOSE" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='DEPOSE'?'var(--depose)':'var(--border)')+';background:'+(r.action==='DEPOSE'?'rgba(255,102,0,0.15)':'var(--bg)')+';color:'+(r.action==='DEPOSE'?'var(--depose)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🗑️ DEPOSE</button>' +
+      '<button class="qe-action-btn'+(r.action==='FILM'?' active':'')+'" data-val="FILM" onclick="selectQeAction(this)" style="padding:8px;border-radius:8px;border:1.5px solid '+(r.action==='FILM'?'var(--film)':'var(--border)')+';background:'+(r.action==='FILM'?'rgba(41,121,255,0.15)':'var(--bg)')+';color:'+(r.action==='FILM'?'var(--film)':'var(--text)')+';font-size:11px;font-weight:700;cursor:pointer;">🛡️ FILM</button>' +
+    '</div>' +
+
+    '<label class="lbl" data-i18n="poseur">POSEUR</label>' +
+    '<input type="text" id="qe-poseur" value="'+(r.poseur||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;outline:none;"/>' +
+
+    '<label class="lbl" data-i18n="campagne">CAMPAGNE</label>' +
+    '<input type="text" id="qe-camp" value="'+(r.campagne||'')+'" style="width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none;"/>' +
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+      '<button id="qe-save-btn" data-id="'+id+'" style="padding:12px;background:var(--yellow);color:var(--gray);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">💾 SAUVER</button>' +
+      '<button onclick="closeEditModal()" style="padding:12px;background:var(--surface2);color:var(--text);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">✕ Annuler</button>' +
+    '</div>';
+
+  modal.appendChild(box);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  document.getElementById('qe-save-btn').addEventListener('click', function(){
+    saveQuickEdit(this.getAttribute('data-id'));
+  });
+  document.getElementById('qe-cancel-btn').addEventListener('click', function(){
+    document.getElementById('quickEditModal').remove();
+  });
+}
+
+function selectQeAction(btn){
+  document.querySelectorAll('.qe-action-btn').forEach(function(b){
+    b.style.border = '1.5px solid var(--border)';
+    b.style.background = 'var(--bg)';
+    b.style.color = 'var(--text)';
+  });
+  var colors = {POSE:'var(--pose)',DEPOSE:'var(--depose)',FILM:'var(--film)'};
+  var bgs = {POSE:'rgba(0,230,118,0.15)',DEPOSE:'rgba(255,102,0,0.15)',FILM:'rgba(41,121,255,0.15)'};
+  var val = btn.getAttribute('data-val');
+  btn.style.border = '1.5px solid '+colors[val];
+  btn.style.background = bgs[val];
+  btn.style.color = colors[val];
+}
+
+async function saveQuickEdit(id){
+  var busVal = document.getElementById('qe-bus').value;
+  var poseurVal = document.getElementById('qe-poseur').value;
+  var campVal = document.getElementById('qe-camp').value;
+  var activeBtn = document.querySelector('.qe-action-btn[style*="rgba"]');
+  var actionVal = activeBtn ? activeBtn.getAttribute('data-val') : null;
+
+  if(!busVal){ showToast('❌ N° Bus requis'); return; }
+  if(!actionVal){ showToast('❌ Sélectionne une action'); return; }
+
+  try {
+    await db.collection('records').doc(id).update({
+      bus: String(parseInt(busVal)).padStart(3,'0'),
+      action: actionVal,
+      poseur: poseurVal,
+      campagne: campVal
+    });
+    var m = document.getElementById('quickEditModal');
+    if(m) m.remove();
+    showToast('✅ Modifié avec succès');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
+
+
+
+
+
+
+// ══ HIDE HEADER + TABS ON SCROLL ══
+(function(){
+  var header = null;
+  var tabs = null;
+  window.addEventListener('scroll', function(){
+    if(!header) header = document.querySelector('.header');
+    if(!tabs) tabs = document.querySelector('.tabs');
+    var y = window.pageYOffset || document.documentElement.scrollTop;
+    if(y > 50){
+      // Scrolled down → hide
+      if(header) header.classList.add('hidden');
+      if(tabs) tabs.classList.add('hidden');
+    } else {
+      // At top → show
+      if(header) header.classList.remove('hidden');
+      if(tabs) tabs.classList.remove('hidden');
+    }
+  }, {passive:true});
+})();
+
+// ══ LANG ══
+var _lang = 'fr';
+
+var _t = {
+  fr: {
+    capture: 'VALID', equipe: 'ÉQUIPE', gestion: 'GESTION',
+    rapport: 'RAPPORT', config: 'CONFIG',
+    nbus: 'N° BUS', campagne: 'CAMPAGNE', depot: 'DÉPÔT', poseur: 'POSEUR',
+    action: 'ACTION', photo: 'PHOTO',
+    pose: 'POSE', depose: 'DEPOSE', film: 'FILM',
+    habillage: 'Habillage', protection: 'Protection',
+    sel_campagne: '— Sélectionner campagne —',
+    sel_poseur: '— Sélectionner poseur —',
+    enregistrer: '📥 ENREGISTRER LA PHOTO',
+    prendre: 'PRENDRE / CHOISIR PHOTO',
+    upload: 'Envoi vers Google Drive...',
+    saved: '✅ Photo envoyée sur Google Drive!',
+    tout: 'TOUT', tous: '👥 TOUS',
+    aucune: 'AUCUNE PHOTO CE JOUR',
+    modifier: '✏️ MODIFIER',
+    sauvegarder: '💾 SAUVEGARDER',
+    annuler: 'Annuler',
+    acces: 'ACCÈS SÉCURISÉ',
+    code_hint: 'ENTREZ VOTRE CODE PERSONNEL',
+    code: 'CODE',
+    connexion: '→ CONNEXION',
+    code_error: '❌ Code incorrect',
+    informations: 'INFORMATIONS',
+    nom_fichier: 'NOM DU FICHIER',
+  },
+  ar: {
+    capture: 'VALID', equipe: 'الفريق', gestion: 'إدارة',
+    rapport: 'تقرير', config: 'إعداد',
+    nbus: 'رقم الحافلة', campagne: 'الحملة', depot: 'المستودع', poseur: 'المثبت',
+    action: 'العملية', photo: 'الصورة',
+    pose: 'تركيب', depose: 'فك', film: 'فيلم واق',
+    habillage: 'تلبيس', protection: 'حماية', action_card: 'العملية',
+    sel_campagne: '— اختر الحملة —',
+    sel_poseur: '— اختر المثبت —',
+    enregistrer: '📥 حفظ الصورة',
+    prendre: 'التقاط / اختيار صورة',
+    upload: 'الإرسال إلى Google Drive...',
+    saved: '✅ تم إرسال الصورة!',
+    tout: 'الكل', tous: '👥 الكل',
+    aucune: 'لا توجد صور اليوم',
+    modifier: '✏️ تعديل',
+    sauvegarder: '💾 حفظ',
+    annuler: 'إلغاء',
+    acces: 'دخول آمن',
+    code_hint: 'أدخل رمزك الشخصي',
+    code: 'الرمز',
+    connexion: '→ دخول',
+    code_error: '❌ رمز غير صحيح',
+    informations: 'المعلومات',
+    nom_fichier: 'اسم الملف',
+    depot_Maarif: 'معاريف',
+    depot_Madiouna: 'مديونة',
+    depot_Sidi_Barnousi: 'سيدي برنوصي',
+    depot_Bane_Msik: 'بن مسيك',
+  }
+};
+
+function t(key){ return (_t[_lang] && _t[_lang][key]) || _t['fr'][key] || key; }
+
+function toggleLang(){
+  _lang = _lang === 'fr' ? 'ar' : 'fr';
+  var thumb = document.getElementById('langThumb');
+  if(thumb) thumb.textContent = _lang === 'ar' ? 'AR' : 'FR';
+  if(_lang === 'ar'){
+    document.body.classList.add('lang-ar');
+  } else {
+    document.body.classList.remove('lang-ar');
+  }
+  localStorage.setItem('lang', _lang);
+  applyTranslations();
+}
+
+function applyTranslations(){
+  // Translate ALL elements with data-i18n (CAPTURE + EQUIPE only via HTML targeting)
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key = el.getAttribute('data-i18n');
+    var val = t(key);
+    if(val) el.textContent = val;
+  });
+
+  // Login page
+  var loginTitle = document.querySelector('.login-title');
+  if(loginTitle) loginTitle.textContent = t('acces');
+  var loginSub = document.querySelector('.login-sub');
+  if(loginSub) loginSub.textContent = t('code_hint');
+  var loginLabel = document.querySelector('.login-label');
+  if(loginLabel) loginLabel.textContent = t('code');
+  var loginBtn = document.querySelector('.login-btn');
+  if(loginBtn) loginBtn.textContent = t('connexion');
+
+  // Rebuild custom dropdowns with new language placeholder
+  var campDisplay = document.querySelector('#sd-campagne .sd-display');
+  if(campDisplay && !_sdValues.campagne) campDisplay.textContent = t('sel_campagne');
+  var poseurDisplay = document.querySelector('#sd-poseur .sd-display');
+  if(poseurDisplay && !_sdValues.poseur) poseurDisplay.textContent = t('sel_poseur');
+
+  // EQUIPE empty state (dynamic)
+  document.querySelectorAll('.empty-text').forEach(function(el){
+    el.textContent = t('aucune');
+  });
+
+  // Rebuild depot buttons with new language
+  buildDepotButtons();
+
+  // EQUIPE action filter buttons
+  document.querySelectorAll('#actionFilters .filter-btn').forEach(function(btn){
+    var txt = btn.textContent.trim();
+    if(txt === 'TOUT' || txt === 'الكل') btn.textContent = t('tout');
+  });
+}
+
+// ══ TABS ══
+function showTab(tab, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  el.classList.add('active');
+  closeAllDropdowns();
+  if(tab==='history'){ _histFilter.date=getTodayStr(); updateDateDisplay(); renderHistory(); }
+  if(tab==='gestion'){
+    if(!_records.length){
+      db.collection('records').orderBy('timestamp','desc').get().then(function(snap){
+        _records = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        renderGestion();
+      });
+    } else { renderGestion(); }
+  }
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='export'){
+    if(!_records.length){
+      db.collection('records').orderBy('timestamp','desc').get().then(function(snap){
+        _records = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        renderStats();
+      });
+    } else { renderStats(); }
+  }
+  if(tab==='settings') renderSettings();
+}
+
+// ══ DROPDOWN ══
+function buildDropdown(cid, key, items, placeholder){
+  const val=_sdValues[key];
+  document.getElementById(cid).innerHTML=`
+    <div class="sd-display ${val?'':'empty-val'}" id="sd-btn-${key}" onclick="toggleDropdown('${key}')">
+      <span class="sd-display-text">${val||placeholder}</span>
+      <span class="sd-arrow">▼</span>
+    </div>
+    <div class="sd-panel" id="sd-panel-${key}">
+      <div class="sd-search"><input type="text" placeholder="Rechercher..." id="sd-search-${key}" oninput="filterDropdown('${key}')" onclick="event.stopPropagation()"/></div>
+      <div class="sd-list" id="sd-list-${key}">${renderDDItems(key,items,'')}</div>
+    </div>`;
+}
+
+function renderDDItems(key,items,q){
+  const f=q?items.filter(i=>i.toLowerCase().includes(q.toLowerCase())):items;
+  let h='';
+  if(!f.length&&!q) h='<div class="sd-empty">Aucun — ajoutez depuis CONFIG</div>';
+  else if(!f.length) h='<div class="sd-empty">Aucun résultat</div>';
+  else f.forEach(i=>{ h+=`<div class="sd-item${_sdValues[key]===i?' selected':''}" onclick="selectDD('${key}','${i.replace(/'/g,"\'")}') ">${i}${_sdValues[key]===i?' ✓':''}</div>`; });
+  const lbl={campagne:'campagne',depot:'dépôt',poseur:'poseur'}[key];
+  h+=`<div class="sd-item add-new" onclick="addNewDD('${key}','${q.replace(/'/g,"\'")}')">➕ ${q?'Ajouter "'+q+'"':'Ajouter '+lbl+'...'}</div>`;
+  return h;
+}
+
+function toggleDropdown(key){
+  const panel=document.getElementById('sd-panel-'+key);
+  const isOpen=panel.classList.contains('open');
+  closeAllDropdowns();
+  if(!isOpen){ panel.classList.add('open'); document.getElementById('sd-btn-'+key).classList.add('open'); setTimeout(()=>{const s=document.getElementById('sd-search-'+key);if(s)s.focus();},100); }
+}
+function closeAllDropdowns(){
+  document.querySelectorAll('.sd-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.sd-display').forEach(b=>b.classList.remove('open'));
+}
+function filterDropdown(key){
+  const q=document.getElementById('sd-search-'+key).value;
+  const m={campagne:'camps',depot:'depots',poseur:'poseurs'};
+  document.getElementById('sd-list-'+key).innerHTML=renderDDItems(key,_cfg[m[key]],q);
+}
+function selectDD(key,val){
+  _sdValues[key]=val; closeAllDropdowns(); rebuildDD(key); updatePreview();
+}
+async function addNewDD(key,val){
+  const m={campagne:'camps',depot:'depots',poseur:'poseurs'};
+  const l={campagne:'Campagne',depot:'Dépôt',poseur:'Poseur'};
+  const input=val||prompt('Nouveau '+l[key]+':');
+  if(!input||!input.trim()) return;
+  const v=input.trim();
+  if(!_cfg[m[key]].includes(v)){ _cfg[m[key]].push(v); await saveConfig(); }
+  _sdValues[key]=v; closeAllDropdowns(); rebuildDD(key); updatePreview();
+}
+function rebuildDD(key){
+  if(key==='depot'){ buildDepotButtons(); return; }
+  const c={campagne:{cid:'sd-campagne',ph:'— Sélectionner campagne —',arr:'camps'},poseur:{cid:'sd-poseur',ph:'— Sélectionner poseur —',arr:'poseurs'}};
+  const x=c[key]; if(x) buildDropdown(x.cid,key,_cfg[x.arr],x.ph);
+}
+function buildAllDropdowns(){
+  buildDropdown('sd-campagne','campagne',_cfg.camps, t('sel_campagne'));
+  buildDepotButtons();
+  buildDropdown('sd-poseur','poseur',_cfg.poseurs, t('sel_poseur'));
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.sd-wrap')) closeAllDropdowns(); });
+
+// ══ DEPOT BUTTONS ══
+function buildDepotButtons(){
+  var depots = _cfg.depots || ['Maarif','Sidi Barnousi','Madiouna','Bane Msik'];
+  var wrap = document.getElementById('depotBtns');
+  if(!wrap) return;
+  var html = '';
+  for(var i=0; i<depots.length; i++){
+    var d = depots[i];
+    var dKey = 'depot_' + d.replace(/ /g,'_');
+    var dLabel = (_lang === 'ar' && _t.ar && _t.ar[dKey]) ? _t.ar[dKey] : d;
+    var active = (_sdValues.depot===d) ? ' active' : '';
+    html += '<button class="depot-btn'+active+'" data-depot="'+d+'">'+dLabel+'</button>';
+  }
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.depot-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ selectDepot(this.getAttribute('data-depot')); });
+  });
+}
+
+function selectDepot(d){
+  _sdValues.depot = (_sdValues.depot===d) ? '' : d;
+  buildDepotButtons();
+  updatePreview();
+}
+
+// ══ THEME ══
+function toggleTheme(){
+  var isLight = document.body.classList.toggle('light');
+  var thumb = document.getElementById('themeThumb');
+  if(thumb) thumb.textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+function loadTheme(){
+  var t = localStorage.getItem('theme');
+  if(t==='light'){
+    document.body.classList.add('light');
+    var thumb = document.getElementById('themeThumb');
+    if(thumb) thumb.textContent = '☀️';
+  }
+}
+
+// ══ ACTION ══
+function setAction(a){
+  _state.action=a;
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.act-btn.'+a.toLowerCase()).classList.add('active');
+  updatePreview();
+}
+
+// ══ FILE ══
+function handleFile(input){
+  const f=input.files[0]; if(!f) return;
+  _state.file=f; _state.fileURL=URL.createObjectURL(f);
+  document.getElementById('photoArea').innerHTML=`<div class="preview-wrap"><img src="${_state.fileURL}" class="preview-img"/><button class="change-photo" onclick="changePhoto()">🔄 Changer</button></div>`;
+  updatePreview();
+}
+function changePhoto(){
+  _state.file=null; _state.fileURL=null;
+  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text" data-i18n="prendre">PRENDRE / CHOISIR PHOTO</span></label>`;
+  document.getElementById('fileInput').value='';
+  updatePreview();
+}
+
+// ══ FILENAME ══
+
+function validateBus(input){
+  var val = input.value.trim();
+  var hint = document.getElementById('busHint');
+  if(!hint) return;
+  if(!val){ hint.textContent=''; hint.style.color='var(--muted)'; return; }
+  if(val.length < 5){
+    hint.textContent = (5-val.length) + ' chiffre(s) manquant(s)';
+    hint.style.color = '#e53935';
+  } else if(val.length === 5){
+    hint.textContent = '✓';
+    hint.style.color = '#4caf50';
+  } else {
+    hint.textContent = '❌ Max 5 chiffres';
+    hint.style.color = '#e53935';
+  }
+}
+function pad(n){return String(parseInt(n)||0).padStart(5,'0');}
+function getDate(){const d=new Date();return [d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');}
+
+function getGPS(){
+  return new Promise(function(resolve){
+    if(!navigator.geolocation){ resolve(null); return; }
+    // Check permission first if API available
+    if(navigator.permissions){
+      navigator.permissions.query({name:'geolocation'}).then(function(perm){
+        if(perm.state === 'denied'){
+          resolve(null); return;
+        }
+        _doGetGPS(resolve);
+      }).catch(function(){ _doGetGPS(resolve); });
+    } else {
+      _doGetGPS(resolve);
+    }
+  });
+}
+
+function _doGetGPS(resolve){
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ 
+      resolve({lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy)}); 
+    },
+    function(err){ 
+      console.log('GPS error:', err.code, err.message);
+      resolve(null); 
+    },
+    {enableHighAccuracy:true, timeout:8000, maximumAge:30000}
+  );
+}
+
+// Request GPS permission proactively on login
+function requestGPSPermission(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ console.log('GPS ready:', pos.coords.latitude, pos.coords.longitude); },
+    function(err){ console.log('GPS denied:', err.message); },
+    {enableHighAccuracy:false, timeout:5000}
+  );
+}
+function buildFileName(){
+  const bus=document.getElementById('busNum').value.trim();
+  const camp=_sdValues.campagne;
+  if(!bus||!camp||!_state.file) return null;
+  if(bus.length !== 5){ showToast('❌ N° Bus doit être 5 chiffres'); return null; }
+  const ext=_state.file.name.split('.').pop().toLowerCase();
+  return `${pad(bus)}_${_state.action}_${camp.replace(/\s+/g,'-')}_${getDate()}.${ext}`;
+}
+function updatePreview(){
+  const fn=buildFileName();
+  document.getElementById('fnameBox').style.display=fn?'block':'none';
+  if(fn) document.getElementById('fnameVal').textContent='📎 '+fn;
+  document.getElementById('dlBtn').disabled=!fn;
+}
+
+// ══ CAPTURE ══
+async function doCapture(){
+  const fn=buildFileName(); if(!fn) return;
+  const btn=document.getElementById('dlBtn');
+  btn.disabled=true; btn.textContent='⏳ Envoi...';
+  document.getElementById('progressWrap').style.display='block';
+  document.getElementById('progressFill').style.width='20%';
+  document.getElementById('progressText').textContent='Envoi vers Google Drive...';
+
+  try {
+    // Convert to base64
+    var base64 = await toBase64(_state.file);
+    
+    document.getElementById('progressFill').style.width='50%';
+    document.getElementById('progressText').textContent='Upload en cours...';
+
+    // Save thumb for local preview
+    var photoURL = await toThumb(_state.file);
+    var driveUrl = '';
+    
+    document.getElementById('progressFill').style.width='60%';
+    document.getElementById('progressText').textContent='Envoi vers Google Drive...';
+    
+    try {
+      document.getElementById('progressText').textContent='Envoi Drive...';
+      
+      // Send to Drive - use text/plain to avoid CORS preflight
+      var controller = new AbortController();
+      var tid = setTimeout(function(){ controller.abort(); }, 20000);
+      
+      var resp = await fetch(DRIVE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify({image:base64, fileName:fn, date:getDate()}),
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      
+      var txt = await resp.text();
+      var result = null;
+      try { result = JSON.parse(txt); } catch(e){ console.log('Parse err:',e,txt.substring(0,100)); }
+      
+      if(result && result.success && result.fileId){
+        driveUrl = 'https://drive.google.com/file/d/'+result.fileId+'/view';
+        showToast('✅ Photo Drive prête!');
+      } else if(result && result.success && result.url){
+        // Try url field if fileId missing
+        var m = result.url.match(/id=([^&]+)/);
+        if(m) driveUrl = 'https://drive.google.com/file/d/'+m[1]+'/view';
+        else driveUrl = result.url;
+        showToast('✅ Photo Drive!');
+      } else {
+        // Build folder link for current day
+        var dateStr = getDate();
+        var month = dateStr.substring(6,10)+'-'+dateStr.substring(3,5);
+        driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
+        console.log('Drive result:', JSON.stringify(result), 'raw:', txt.substring(0,200));
+      }
+      
+    } catch(fetchErr) {
+      console.log('Drive upload error:', fetchErr.message);
+      // Keep local thumbnail as fallback
+    }
+    
+    document.getElementById('progressFill').style.width='80%';
+
+    // Save to Firestore
+    await db.collection('records').add({
+      bus:pad(document.getElementById('busNum').value.trim()),
+      action:_state.action,campagne:_sdValues.campagne,
+      depot:_sdValues.depot,poseur:_sdValues.poseur,
+      fileName:fn,photoURL:photoURL,storagePath:'',
+      driveUrl: driveUrl,
+      date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
+    });
+
+    document.getElementById('progressFill').style.width='100%';
+    document.getElementById('progressWrap').style.display='none';
+    showToast('✅ Photo envoyée sur Google Drive!');
+    resetCapture();
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+    btn.disabled=false; btn.textContent='📥 ENREGISTRER LA PHOTO';
+    document.getElementById('progressWrap').style.display='none';
+  }
+}
+
+function toBase64(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(e){ resolve(e.target.result); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function toThumb(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        var max = 120; // Small enough for Firestore
+        var w = img.width, h = img.height;
+        if(w > h){ if(w>max){h=Math.round(h*max/w);w=max;} } else { if(h>max){w=Math.round(w*max/h);h=max;} }
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.4)); // Small quality
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function resetCapture(){
+  document.getElementById('busNum').value='';
+  _sdValues={campagne:'',depot:'',poseur:''};
+  _state.file=null; _state.fileURL=null; _state.action='POSE';
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.act-btn.pose').classList.add('active');
+  document.getElementById('photoArea').innerHTML=`<label for="fileInput" class="photo-label"><span class="ph-icon">📷</span><span class="ph-text" data-i18n="prendre">PRENDRE / CHOISIR PHOTO</span></label>`;
+  document.getElementById('fileInput').value='';
+  document.getElementById('fnameBox').style.display='none';
+  document.getElementById('btnArea').innerHTML=`<button class="btn-primary" id="dlBtn" onclick="doCapture()" disabled>📥 ENREGISTRER LA PHOTO</button>`;
+  buildAllDropdowns();
+}
+
+// ══ HISTORY ══
+function updateDateDisplay(){ document.getElementById('dateDisplay').textContent='📅 '+_histFilter.date; }
+function changeDate(dir){
+  const p=_histFilter.date.split('-');
+  const d=new Date(p[2],p[1]-1,p[0]);
+  d.setDate(d.getDate()+dir);
+  _histFilter.date=[d.getDate(),d.getMonth()+1,d.getFullYear()].map(x=>String(x).padStart(2,'0')).join('-');
+  updateDateDisplay(); renderHistory();
+}
+function onDatePick(val){
+  if(!val) return;
+  const [y,m,d]=val.split('-');
+  _histFilter.date=[d,m,y].join('-');
+  updateDateDisplay(); renderHistory();
+}
+function setHistFilter(type,val,el){
+  _histFilter[type]=val;
+  const cid=type==='action'?'actionFilters':'poseurFilters';
+  document.getElementById(cid).querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderHistory();
+}
+function renderHistory(){
+  var isAdmin = _currentUser && _currentUser.role==='admin';
+  var isChef  = _currentUser && _currentUser.role==='chef';
+  var isEquipe= _currentUser && _currentUser.role==='equipe';
+
+  // Stats board: admin + chef only
+  var board = document.getElementById('statsBoard');
+  if(board){ board.style.display=(isAdmin||isChef)?'block':'none'; }
+  if(isAdmin||isChef) renderPoseurStats();
+
+  // Poseur filter buttons: admin + chef only
+  const pf=document.getElementById('poseurFilters');
+  if(isAdmin||isChef){
+    const poseurs=[...new Set(_records.filter(r=>r.date===_histFilter.date).map(r=>r.poseur).filter(Boolean))];
+    pf.innerHTML=poseurs.length ? ['ALL',...poseurs].map(p=>`<button class="filter-btn${(p==='ALL'&&_histFilter.poseur==='ALL')||(p===_histFilter.poseur)?' active':''}" onclick="setHistFilter('poseur','${p}',this)">${p==='ALL'?'👥 TOUS':p}</button>`).join('') : '';
+  } else {
+    pf.innerHTML='';
+  }
+
+  // Base records for this date
+  let records=_records.filter(r=>r.date===_histFilter.date);
+
+  // Equipe: see ONLY their own records
+  if(isEquipe){
+    records=records.filter(r=>r.poseur===_currentUser.name);
+  }
+
+  // Action filter
+  if(_histFilter.action!=='ALL') records=records.filter(r=>r.action===_histFilter.action);
+
+  // Poseur filter (admin/chef only)
+  if((isAdmin||isChef) && _histFilter.poseur!=='ALL') records=records.filter(r=>r.poseur===_histFilter.poseur);
+
+  // Bus number filter
+  var busInput = document.getElementById('busSearchInput');
+  var busVal = busInput ? busInput.value.trim() : '';
+  if(busVal) records=records.filter(r=>(r.bus||'').toString().includes(busVal));
+
+  // Summary
+  const sm=document.getElementById('histSummary');
+  sm.textContent=records.length?`${records.length} photo(s) · POSE:${records.filter(r=>r.action==='POSE').length} DEPOSE:${records.filter(r=>r.action==='DEPOSE').length} FILM:${records.filter(r=>r.action==='FILM').length}`:'';
+
+  const list=document.getElementById('histList');
+  if(!records.length){ list.innerHTML=`<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">AUCUNE PHOTO CE JOUR</div></div>`; return; }
+
+  var isAdmin2 = isAdmin; // for template
+  list.innerHTML=records.map(r=>{
+    // Only use driveUrl if it's a real file link (not folder)
+    var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
+    // Check photoURL too
+    if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+    // If driveUrl is folder, still show it as "open Drive" button
+    var driveFolderLink = (!driveLink && r.driveUrl && r.driveUrl.includes('drive.google')) ? r.driveUrl : '';
+    var hasPhoto = driveLink || (r.photoURL && r.photoURL.startsWith('data:'));
+    var canEdit = true; // all roles can edit
+    return `
+    <div class="hist-item">
+      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="cursor:${driveLink?'pointer':'default'}" onclick="${driveLink?`window.open('${driveLink}','_blank')`:''}"/>
+      <div class="hist-info">
+        <div class="hist-top">
+          <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
+          <span class="hist-bus">Bus ${r.bus}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:4px;">${r.time||''}</span>
+        </div>
+        <div class="hist-fname">${r.campagne||''}${r.depot?' · '+r.depot:''}</div>
+        ${(isAdmin||isChef) ? `<div class="hist-meta" style="color:#FDDD00;font-weight:600;">👷 ${r.poseur||'—'}</div>` : ''}
+        ${r.location && r.location.lat ? `<div class="hist-meta" style="font-size:10px;color:#888;"><a href="https://maps.google.com/?q=${r.location.lat},${r.location.lng}" target="_blank" style="color:#4285f4;text-decoration:none;">📍 ${r.location.lat.toFixed(4)},${r.location.lng.toFixed(4)} (±${r.location.acc||'?'}m)</a></div>` : ''}
+        <div class="hist-meta" style="font-size:10px;color:${hasPhoto?'#4caf50':'#e53935'};">${hasPhoto?'📸 Photo disponible':'📷 Pas de photo'}</div>
+      </div>
+      <div class="hist-actions">
+        ${driveLink ? `<button class="hist-dl" title="Drive" onclick="window.open('${driveLink}','_blank')" style="color:#4285f4;">🔗</button>` : ''}
+        ${hasPhoto ? `<button class="hist-dl" title="Télécharger" onclick="downloadPhoto('${r.photoURL||''}','${r.fileName||''}','${driveLink||''}')">⬇️</button>` : ''}
+        <button class="hist-dl" style="color:var(--yellow);" onclick="openEditModal('${r.id}')">✏️</button>
+        ${isAdmin ? `<button class="hist-del" onclick="deleteRecord('${r.id}','${r.storagePath||''}')">🗑️</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function downloadPhoto(url,name,driveUrl){
+  var target = driveUrl || url;
+  if(!target || target === 'undefined') { showToast('❌ Photo non disponible'); return; }
+  var a=document.createElement('a');
+  a.href=target;
+  a.target='_blank';
+  a.download=name;
+  a.click();
+}
+async function deleteRecord(id,sp){
+  if(!_currentUser || _currentUser.role !== 'admin'){ showToast('❌ Accès refusé'); return; }
+  if(!confirm('Supprimer cette photo ?')) return;
+  try{ await db.collection('records').doc(id).delete(); if(sp){ try{ await storage.ref(sp).delete(); }catch(e){} } showToast('🗑️ Supprimé'); }catch(e){ showToast('❌ Erreur'); }
+}
+
+// ══ STATS ══
+function renderStats(){
+  document.getElementById('statPose').textContent=_records.filter(r=>r.action==='POSE').length;
+  document.getElementById('statDepose').textContent=_records.filter(r=>r.action==='DEPOSE').length;
+  document.getElementById('statFilm').textContent=_records.filter(r=>r.action==='FILM').length;
+  updateRapportStats();
+}
+
+function parseDate(str){
+  // str format: DD-MM-YYYY
+  if(!str) return null;
+  var p = str.split('-');
+  if(p.length===3) return new Date(p[2], p[1]-1, p[0]);
+  return null;
+}
+
+function parseDateInput(str){
+  // input type=date gives YYYY-MM-DD
+  if(!str) return null;
+  var p = str.split('-');
+  return new Date(p[0], p[1]-1, p[2]);
+}
+
+function getFilteredRecords(){
+  var from = parseDateInput(document.getElementById('dateFrom').value);
+  var to = parseDateInput(document.getElementById('dateTo').value);
+  return _records.filter(function(r){
+    var d = parseDate(r.date);
+    if(!d) return false;
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  });
+}
+
+function updateRapportStats(){
+  var records = getFilteredRecords();
+  var from = document.getElementById('dateFrom').value;
+  var to = document.getElementById('dateTo').value;
+  var info = document.getElementById('filteredInfo');
+  var statsDiv = document.getElementById('filteredStats');
+
+  if(!from && !to){
+    info.textContent = 'Sélectionnez une période pour filtrer';
+    statsDiv.innerHTML = '';
+    return;
+  }
+
+  var pose = records.filter(function(r){return r.action==='POSE';}).length;
+  var depose = records.filter(function(r){return r.action==='DEPOSE';}).length;
+  var film = records.filter(function(r){return r.action==='FILM';}).length;
+
+  statsDiv.innerHTML =
+    '<div class="stat-box pose" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+pose+'</div><div class="stat-lbl">POSE</div></div>' +
+    '<div class="stat-box depose" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+depose+'</div><div class="stat-lbl">DEPOSE</div></div>' +
+    '<div class="stat-box film" style="padding:10px;"><div class="stat-num" style="font-size:24px;">'+film+'</div><div class="stat-lbl">FILM</div></div>';
+
+  info.textContent = records.length + ' enregistrement(s) trouvé(s)';
+}
+
+function exportCSVFiltered(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune donnée pour cette période');
+  var h=['N_Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
+  var rows=records.map(function(r){return [r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time];});
+  var sep=';';
+  var csv='sep='+sep+'\n'+[h].concat(rows).map(function(r){
+    return r.map(function(v){return '"'+(v||'')+'"';}).join(sep);
+  }).join('\n');
+  var a=document.createElement('a');
+  var from=document.getElementById('dateFrom').value||'debut';
+  var to=document.getElementById('dateTo').value||'fin';
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='rapport_'+from+'_au_'+to+'.csv';
+  a.click();
+  showToast('✅ Excel téléchargé!');
+}
+
+async function exportPhotosFiltered(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucune photo pour cette période');
+
+  var from = document.getElementById('dateFrom').value || 'debut';
+  var to = document.getElementById('dateTo').value || 'fin';
+
+  // Check if photos available
+  var withPhotos = records.filter(function(r){ return r.photoURL && r.photoURL.startsWith('data:'); });
+
+  if(withPhotos.length === 0){
+    showToast('❌ Photos non disponibles — elles sont sauvegardées sur les téléphones');
+    return;
+  }
+
+  showToast('📦 Création du ZIP...');
+
+  try {
+    var zip = new JSZip();
+    var folder = zip.folder('photos_'+from+'_au_'+to);
+
+    withPhotos.forEach(function(r){
+      // Convert base64 data URL to blob
+      var dataUrl = r.photoURL;
+      var base64 = dataUrl.split(',')[1];
+      var ext = dataUrl.indexOf('jpeg') > -1 ? 'jpg' : 'png';
+      var filename = r.fileName || ('Bus'+r.bus+'_'+r.action+'_'+r.date+'.'+ext);
+      folder.file(filename, base64, {base64: true});
+    });
+
+    var blob = await zip.generateAsync({type:'blob'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'photos_'+from+'_au_'+to+'.zip';
+    a.click();
+    showToast('✅ ZIP téléchargé! ('+withPhotos.length+' photos)');
+  } catch(e){
+    showToast('❌ Erreur: '+e.message);
+  }
+}
+
+async function deleteByDateRange(){
+  var records = getFilteredRecords();
+  if(!records.length) return showToast('Aucun enregistrement pour cette période');
+  var from = document.getElementById('dateFrom').value;
+  var to = document.getElementById('dateTo').value;
+  if(!confirm('Supprimer '+records.length+' enregistrement(s) entre '+from+' et '+to+' ?')) return;
+  var count = 0;
+  for(var i=0; i<records.length; i++){
+    try {
+      await db.collection('records').doc(records[i].id).delete();
+      count++;
+    } catch(e){}
+  }
+  showToast('🗑️ '+count+' enregistrement(s) supprimé(s)');
+}
+function exportCSV(){
+  if(!_records.length) return showToast('Aucune donnée');
+  var h=['N_Bus','Action','Campagne','Depot','Poseur','Fichier','Date','Heure'];
+  var rows=_records.map(function(r){return [r.bus,r.action,r.campagne,r.depot,r.poseur,r.fileName,r.date,r.time];});
+  // Use semicolon separator for Excel compatibility + BOM
+  var sep = ';';
+  var csv='sep='+sep+'\n'+[h].concat(rows).map(function(r){
+    return r.map(function(v){ return '"'+(v||'')+'"'; }).join(sep);
+  }).join('\n');
+  var bom = '\uFEFF';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([bom+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='rapport_casabus_'+getDate()+'.csv';
+  a.click();
+  showToast('✅ Excel téléchargé!');
+}
+function exportTXT(){
+  if(!_records.length) return showToast('Aucune donnée');
+  var lines=['RAPPORT CASABUS - '+getDate(),'========================================',''];
+  _records.forEach(function(r){
+    lines.push('['+r.action+'] Bus '+r.bus+' | '+r.campagne+' | '+(r.depot||'-')+' | '+(r.poseur||'-')+' | '+r.date+' '+r.time);
+    lines.push('  -> '+r.fileName);
+  });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8;'}));
+  a.download='rapport_'+getDate()+'.txt';
+  a.click();
+}
+// ══ SETTINGS ══
+function renderSettings(){
+  renderTags('camp','campList',_cfg.camps);
+  renderTags('depot','depotList',_cfg.depots);
+  renderTags('poseur','poseurList',_cfg.poseurs);
+  renderCodes();
+}
+
+function renderCodes(){
+  if(!_cfg.poseurCodes) _cfg.poseurCodes={};
+  const div=document.getElementById('codesList');
+  const entries=Object.entries(_cfg.poseurCodes);
+  if(!entries.length){ div.innerHTML='<span style="font-size:11px;color:var(--muted)">Aucun code — code admin: 12042024</span>'; return; }
+  div.innerHTML=entries.map(([code,name])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <span style="color:var(--text);font-size:13px;">${name}</span>
+        <span style="color:var(--yellow);font-size:12px;margin-left:12px;letter-spacing:2px;">CODE: ${code}</span>
+      </div>
+      <span style="cursor:pointer;color:var(--muted);font-size:16px;" onclick="removePoseurCode('${code}')">×</span>
+    </div>`).join('')+'<div style="font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:1px;">Code admin: 0000</div>';
+}
+
+async function addPoseurCode(){
+  const name=document.getElementById('newCodeName').value.trim();
+  const code=document.getElementById('newCodeVal').value.trim();
+  if(!name||!code) return showToast('Nom et code requis');
+  if(!_cfg.poseurCodes) _cfg.poseurCodes={};
+  _cfg.poseurCodes[code]=name;
+  // Also add to poseurs list if not there
+  if(!_cfg.poseurs.includes(name)) _cfg.poseurs.push(name);
+  await saveConfig();
+  renderSettings();
+  document.getElementById('newCodeName').value='';
+  document.getElementById('newCodeVal').value='';
+  showToast('✅ Code ajouté');
+}
+
+async function removePoseurCode(code){
+  if(!confirm('Supprimer ce code ?')) return;
+  delete _cfg.poseurCodes[code];
+  await saveConfig();
+  renderSettings();
+}
+function renderTags(type,lid,items){
+  document.getElementById(lid).innerHTML=items.length?items.map((item,i)=>`<div class="tag"><span>${item}</span><span class="tag-del" onclick="removeItem('${type}',${i})">×</span></div>`).join(''):'<span style="font-size:11px;color:var(--muted)">Aucun élément</span>';
+}
+async function addItem(type){
+  const m={camp:'newCamp',depot:'newDepot',poseur:'newPoseur'};
+  const a={camp:'camps',depot:'depots',poseur:'poseurs'};
+  const input=document.getElementById(m[type]);
+  const val=input.value.trim(); if(!val) return;
+  if(!_cfg[a[type]].includes(val)){ _cfg[a[type]].push(val); await saveConfig(); renderSettings(); buildAllDropdowns(); }
+  input.value='';
+}
+async function removeItem(type,idx){
+  const a={camp:'camps',depot:'depots',poseur:'poseurs'};
+  _cfg[a[type]].splice(idx,1); await saveConfig(); renderSettings(); buildAllDropdowns();
+}
+
+function updateHeaderCount(){
+  
+  const dot=document.getElementById('syncDot');
+  dot.style.opacity='1'; setTimeout(()=>dot.style.opacity='0',1500);
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+['newCamp','newDepot','newPoseur'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter'){const m={newCamp:'camp',newDepot:'depot',newPoseur:'poseur'};addItem(m[id]);} });
+});
+</script>
+
+  <!-- EDIT MODAL -->
+  <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;padding:16px;overflow-y:auto;">
+    <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:480px;margin:20px auto;border:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px;color:var(--yellow);">✏️ MODIFIER</div>
+        <button onclick="closeEditModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+      </div>
+      <div id="editModalContent"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button onclick="saveEditModal()" style="flex:1;background:var(--yellow);color:var(--gray);border:none;border-radius:10px;padding:14px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">💾 SAUVEGARDER</button>
+        <button onclick="closeEditModal()" style="background:var(--surface2);color:var(--muted);border:none;border-radius:10px;padding:14px 20px;font-family:Montserrat,sans-serif;font-weight:600;font-size:14px;cursor:pointer;">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHOTO VIEWER -->
+  <div id="photoViewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:2000;flex-direction:column;align-items:center;justify-content:center;" onclick="closePhotoViewer()">
+    <img id="photoViewerImg" src="" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:12px;"/>
+    <div style="display:flex;gap:12px;margin-top:14px;">
+      <a id="photoViewerLink" href="#" target="_blank" onclick="event.stopPropagation()" style="padding:10px 20px;background:#4285f4;color:#fff;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;">🔗 Ouvrir dans Drive</a>
+      <button onclick="closePhotoViewer()" style="padding:10px 20px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">✕ Fermer</button>
+    </div>
+    <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;">Cliquez n'importe où pour fermer</div>
+  </div>
+
+  
+  <!-- DASHBOARD MODAL -->
+  <div id="dashboardModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:3000;overflow-y:auto;padding:16px;padding-bottom:100px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:var(--yellow);">📈 STATISTIQUES</div>
+      <button onclick="closeDashboard()" style="background:#e53935;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">✕</button>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">RÉPARTITION DES ACTIONS</div>
+      <div style="position:relative;height:220px;"><canvas id="actionsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">INTERVENTIONS PAR DÉPÔT</div>
+      <div style="position:relative;height:220px;"><canvas id="depotsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">ACTIVITÉ PAR POSEUR</div>
+      <div style="position:relative;height:220px;"><canvas id="poseurChart"></canvas></div>
+    </div>
+  </div>
+
+  
+  <!-- OCR SCAN MODAL -->
+  <div id="ocrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:3000;flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">👁️ SCANNER LE NUMÉRO</div>
+      
+      <!-- Live camera preview -->
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px;">
+        <video id="ocrVideo" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;"></video>
+        <!-- Target overlay -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="width:80%;height:100px;border:3px solid var(--yellow);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4);"></div>
+        </div>
+      </div>
+      
+      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px;font-family:Montserrat,sans-serif;min-height:20px;">Cadrez le numéro dans le rectangle</div>
+      
+      <div id="ocrResult" style="display:none;background:var(--surface);border:2px solid var(--yellow);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);font-family:Montserrat,sans-serif;margin-bottom:6px;">NUMÉRO DÉTECTÉ</div>
+        <div id="ocrResultNum" style="font-size:36px;font-weight:900;color:var(--yellow);font-family:Montserrat,sans-serif;letter-spacing:4px;"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button onclick="confirmOCR()" style="flex:1;padding:12px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;">✅ CONFIRMER</button>
+          <button onclick="retryOCR()" style="flex:1;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer;">🔄 RÉESSAYER</button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;">
+        <button id="ocrCaptureBtn" onclick="captureOCR()" style="flex:1;padding:14px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">📸 CAPTURER</button>
+        <button onclick="stopOCRScan()" style="padding:14px 18px;background:#e53935;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">✕</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="ocrCanvas" style="display:none;"></canvas>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="width:90%;max-width:380px;background:var(--surface);border-radius:16px;padding:20px;overflow:hidden;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">📷 SCANNER QR CODE</div>
+      <div id="qr-reader" style="width:100%;border-radius:10px;overflow:hidden;"></div>
+      <button onclick="stopQRScanner()" style="width:100%;margin-top:14px;padding:12px;background:#e53935;color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">✕ FERMER</button>
+    </div>
+  </div>
+
+  
+  <!-- DASHBOARD MODAL -->
+  <div id="dashboardModal" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:3000;overflow-y:auto;padding:16px;padding-bottom:100px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:var(--yellow);">📈 STATISTIQUES</div>
+      <button onclick="closeDashboard()" style="background:#e53935;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">✕</button>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">RÉPARTITION DES ACTIONS</div>
+      <div style="position:relative;height:220px;"><canvas id="actionsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">INTERVENTIONS PAR DÉPÔT</div>
+      <div style="position:relative;height:220px;"><canvas id="depotsChart"></canvas></div>
+    </div>
+    <div style="background:var(--surface);padding:15px;border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px;font-family:Montserrat,sans-serif;">ACTIVITÉ PAR POSEUR</div>
+      <div style="position:relative;height:220px;"><canvas id="poseurChart"></canvas></div>
+    </div>
+  </div>
+
+  
+  <!-- OCR SCAN MODAL -->
+  <div id="ocrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:3000;flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">👁️ SCANNER LE NUMÉRO</div>
+      
+      <!-- Live camera preview -->
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px;">
+        <video id="ocrVideo" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;"></video>
+        <!-- Target overlay -->
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="width:80%;height:100px;border:3px solid var(--yellow);border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4);"></div>
+        </div>
+      </div>
+      
+      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px;font-family:Montserrat,sans-serif;min-height:20px;">Cadrez le numéro dans le rectangle</div>
+      
+      <div id="ocrResult" style="display:none;background:var(--surface);border:2px solid var(--yellow);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);font-family:Montserrat,sans-serif;margin-bottom:6px;">NUMÉRO DÉTECTÉ</div>
+        <div id="ocrResultNum" style="font-size:36px;font-weight:900;color:var(--yellow);font-family:Montserrat,sans-serif;letter-spacing:4px;"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button onclick="confirmOCR()" style="flex:1;padding:12px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;cursor:pointer;">✅ CONFIRMER</button>
+          <button onclick="retryOCR()" style="flex:1;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-weight:700;font-family:Montserrat,sans-serif;cursor:pointer;">🔄 RÉESSAYER</button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;">
+        <button id="ocrCaptureBtn" onclick="captureOCR()" style="flex:1;padding:14px;background:var(--yellow);color:#111;border:none;border-radius:10px;font-weight:800;font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">📸 CAPTURER</button>
+        <button onclick="stopOCRScan()" style="padding:14px 18px;background:#e53935;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">✕</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="ocrCanvas" style="display:none;"></canvas>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="width:90%;max-width:380px;background:var(--surface);border-radius:16px;padding:20px;overflow:hidden;">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:var(--yellow);text-align:center;margin-bottom:14px;">📷 SCANNER QR CODE</div>
+      <div id="qr-reader" style="width:100%;border-radius:10px;overflow:hidden;"></div>
+      <button onclick="stopQRScanner()" style="width:100%;margin-top:14px;padding:12px;background:#e53935;color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;cursor:pointer;">✕ FERMER</button>
+    </div>
+  </div>
+</body>
+</html>
