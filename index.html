@@ -103,19 +103,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .tabs{
   display:flex;
   background:var(--surface);
-  border-bottom:2px solid var(--border);
+  border-top:2px solid var(--border);
   overflow-x:auto;
   scrollbar-width:none;
-  transition:all 0.3s ease;
   position:fixed;
-  top:var(--header-h, 64px);
-  left:0;right:0;
+  bottom:0;left:0;right:0;
   z-index:99;
+  padding-bottom:env(safe-area-inset-bottom, 0px);
 }
 .tabs::-webkit-scrollbar{display:none;}
-.tabs.compact .tab-label{ display:none; }
-.tabs.compact .tab{ padding:6px 6px 5px; }
-.tabs.compact .tab-icon{ font-size:20px; }
 .tab{
   flex:1;
   min-width:60px;
@@ -126,7 +122,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   gap:5px;
   padding:10px 6px 9px;
   cursor:pointer;
-  border-bottom:3px solid transparent;
+  border-top:3px solid transparent;
   transition:all 0.15s;
   -webkit-tap-highlight-color:transparent;
   position:relative;
@@ -145,7 +141,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 }
 .tab.active .tab-label{color:var(--yellow);}
 .tab.active{border-bottom-color:var(--yellow);background:rgba(253,221,0,0.06);}
-.page{display:none;padding:16px;padding-top:130px;max-width:520px;margin:0 auto;}
+.page{display:none;padding:16px;padding-top:80px;padding-bottom:90px;max-width:520px;margin:0 auto;}
 .page.active{display:block;animation:fadeIn 0.2s ease;}
 .card{background:var(--surface);border-radius:12px;padding:18px;border:1px solid var(--border);margin-bottom:14px;}
 .card-title{font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:14px;font-weight:700;text-transform:uppercase;}
@@ -1970,25 +1966,18 @@ async function saveQuickEdit(id){
 
 
 
-// ══ HIDE HEADER + COMPACT TABS ON SCROLL ══
+// ══ HIDE HEADER ON SCROLL ══
 (function(){
   var lastY = 0;
   var header = null;
-  var tabs = null;
   window.addEventListener('scroll', function(){
     if(!header) header = document.querySelector('.header');
-    if(!tabs) tabs = document.querySelector('.tabs');
+    if(!header) return;
     var y = window.pageYOffset || document.documentElement.scrollTop;
     if(y > lastY && y > 60){
-      // Scrolling down: hide header, compact tabs (icons only)
-      if(header) header.classList.add('hidden');
-      if(tabs) tabs.classList.add('compact');
-      if(tabs) tabs.style.top = '0';
+      header.classList.add('hidden');
     } else {
-      // Scrolling up: show header, full tabs
-      if(header) header.classList.remove('hidden');
-      if(tabs) tabs.classList.remove('compact');
-      if(tabs) tabs.style.top = '';
+      header.classList.remove('hidden');
     }
     lastY = y;
   }, {passive:true});
