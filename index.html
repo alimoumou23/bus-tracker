@@ -92,7 +92,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   position:fixed;top:0;left:0;right:0;z-index:100;
   transition:transform 0.3s ease;
 }
-.header.hidden{transform:translateY(-100%);}
 .header-logo{background:transparent;display:flex;align-items:center;}
 .header-logo img{height:40px;}
 .header-count{
@@ -113,7 +112,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   transition:transform 0.3s ease;
 }
 .tabs::-webkit-scrollbar{display:none;}
-.tabs.hidden{transform:translateY(100%);}
 .tab{
   flex:1;
   min-width:60px;
@@ -1968,27 +1966,7 @@ async function saveQuickEdit(id){
 
 
 
-// ══ HIDE HEADER + TABS ON SCROLL ══
-(function(){
-  var lastY = 0;
-  var header = null;
-  var tabs = null;
-  window.addEventListener('scroll', function(){
-    if(!header) header = document.querySelector('.header');
-    if(!tabs) tabs = document.querySelector('.tabs');
-    var y = window.pageYOffset || document.documentElement.scrollTop;
-    var pageH = document.documentElement.scrollHeight - window.innerHeight;
-    // Hide when scrolled a full screen down
-    if(y > window.innerHeight){
-      if(header) header.classList.add('hidden');
-      if(tabs) tabs.classList.add('hidden');
-    } else {
-      if(header) header.classList.remove('hidden');
-      if(tabs) tabs.classList.remove('hidden');
-    }
-    lastY = y;
-  }, {passive:true});
-})();
+
 
 // ══ LANG ══
 var _lang = 'fr';
