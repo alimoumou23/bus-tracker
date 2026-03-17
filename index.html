@@ -1977,7 +1977,9 @@ async function saveQuickEdit(id){
     if(!header) header = document.querySelector('.header');
     if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
-    if(y > 10){
+    var pageH = document.documentElement.scrollHeight - window.innerHeight;
+    // Hide when scrolled a full screen down
+    if(y > window.innerHeight){
       if(header) header.classList.add('hidden');
       if(tabs) tabs.classList.add('hidden');
     } else {
