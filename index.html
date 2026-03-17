@@ -1125,7 +1125,7 @@ async function startOCRScan(){
   
   try {
     _ocrStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }
+      video: { facingMode:'environment', width:{ideal:640}, height:{ideal:480} }
     });
     var video = document.getElementById('ocrVideo');
     video.srcObject = _ocrStream;
