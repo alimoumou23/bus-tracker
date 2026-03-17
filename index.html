@@ -1113,7 +1113,7 @@ function startQRScanner(){
     _qrScanner = new Html5Qrcode('qr-reader');
     _qrScanner.start(
       {facingMode:'environment'},
-      {fps:10, qrbox:{width:220, height:220}},
+      {fps:5, qrbox:{width:180, height:180}, aspectRatio:1.0, videoConstraints:{width:{ideal:640}, height:{ideal:480}}},
       function(decodedText){
         stopQRScanner();
         // Accept any digits - full QR or just numbers
