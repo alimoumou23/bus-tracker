@@ -1,7 +1,7 @@
 {
   "name": "CasaBus Tracker",
   "short_name": "CasaBus",
-  "description": "Suivi habillage bus CasaBus - Opéré par ALSA",
+  "description": "Application de suivi des habillages publicitaires CasaBus - Opéré par ALSA",
   "start_url": "/bus-tracker/",
   "scope": "/bus-tracker/",
   "display": "standalone",
