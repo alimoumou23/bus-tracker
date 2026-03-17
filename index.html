@@ -451,7 +451,7 @@ body.lang-ar .lbl { letter-spacing: 0; }
     <div class="login-title">ACCÈS SÉCURISÉ</div>
     <div class="login-sub">ENTREZ VOTRE CODE PERSONNEL</div>
     <label class="login-lbl">CODE</label>
-    <input type="password" class="login-input" id="loginPass" placeholder="••••" inputmode="numeric" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <input type="password" class="login-input" id="loginPass" placeholder="••••" inputmode="numeric" maxlength="12" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" onclick="doLogin()">→ CONNEXION</button>
     <div class="login-err" id="loginErr">❌ Code incorrect</div>
   </div>
@@ -944,7 +944,7 @@ body.lang-ar .lbl { letter-spacing: 0; }
     <div class="login-title">ACCÈS SÉCURISÉ</div>
     <div class="login-sub">ENTREZ VOTRE CODE PERSONNEL</div>
     <label class="login-lbl">CODE</label>
-    <input type="password" class="login-input" id="loginPass" placeholder="••••" inputmode="numeric" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <input type="password" class="login-input" id="loginPass" placeholder="••••" inputmode="numeric" maxlength="12" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" onclick="doLogin()">→ CONNEXION</button>
     <div class="login-err" id="loginErr">❌ Code incorrect</div>
   </div>
@@ -1174,7 +1174,7 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <div id="codesList"></div>
       <div class="add-tag-row" style="margin-top:12px;">
         <input type="text" id="newCodeName" placeholder="Nom poseur"/>
-        <input type="text" id="newCodeVal" placeholder="Code" style="max-width:90px;text-align:center;" maxlength="8"/>
+        <input type="text" id="newCodeVal" placeholder="Code" style="max-width:90px;text-align:center;" maxlength="12"/>
         <button class="add-tag-btn" onclick="addPoseurCode()">+</button>
       </div>
     </div>
@@ -1199,7 +1199,7 @@ const USERS = {
 };
 let _currentUser = null;
 
-async function doLogin(){
+async async function doLogin(){
   const code = document.getElementById('loginPass').value.trim();
   const err = document.getElementById('loginErr');
   if(!code){ err.style.display='block'; err.textContent='❌ Entrez votre code'; return; }
