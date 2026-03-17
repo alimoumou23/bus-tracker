@@ -110,8 +110,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   bottom:0;left:0;right:0;
   z-index:99;
   padding-bottom:env(safe-area-inset-bottom, 0px);
+  transition:transform 0.3s ease;
 }
 .tabs::-webkit-scrollbar{display:none;}
+.tabs.hidden{transform:translateY(100%);}
 .tab{
   flex:1;
   min-width:60px;
@@ -1966,18 +1968,21 @@ async function saveQuickEdit(id){
 
 
 
-// ══ HIDE HEADER ON SCROLL ══
+// ══ HIDE HEADER + TABS ON SCROLL ══
 (function(){
   var lastY = 0;
   var header = null;
+  var tabs = null;
   window.addEventListener('scroll', function(){
     if(!header) header = document.querySelector('.header');
-    if(!header) return;
+    if(!tabs) tabs = document.querySelector('.tabs');
     var y = window.pageYOffset || document.documentElement.scrollTop;
     if(y > lastY && y > 60){
-      header.classList.add('hidden');
+      if(header) header.classList.add('hidden');
+      if(tabs) tabs.classList.add('hidden');
     } else {
-      header.classList.remove('hidden');
+      if(header) header.classList.remove('hidden');
+      if(tabs) tabs.classList.remove('hidden');
     }
     lastY = y;
   }, {passive:true});
