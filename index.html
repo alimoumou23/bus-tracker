@@ -973,10 +973,21 @@ function closeDashboard(){
 
 function renderCharts(){
   var records = _records;
-  if(!records.length){ showToast('Aucune donnée'); closeDashboard(); return; }
+  
+  // If no records, try loading first
+  if(!records.length){
+    showToast('⏳ Chargement données...');
+    db.collection('records').orderBy('timestamp','desc').get().then(function(snap){
+      _records = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      if(_records.length) renderCharts();
+      else showToast('Aucune donnée');
+    });
+    return;
+  }
 
   // Destroy old charts
   Object.values(_charts).forEach(function(c){ if(c) c.destroy(); });
+  _charts = {};
 
   // Chart 1: Actions pie
   var pose = records.filter(function(r){ return r.action==='POSE'; }).length;
@@ -1090,31 +1101,46 @@ function exportPDF(){
 var _qrScanner = null;
 
 function startQRScanner(){
+  // Check if library loaded
+  if(typeof Html5Qrcode === 'undefined'){
+    showToast('⏳ Scanner non disponible');
+    return;
+  }
   var modal = document.getElementById('qrModal');
   modal.style.display = 'flex';
   
-  _qrScanner = new Html5Qrcode('qr-reader');
-  _qrScanner.start(
-    {facingMode:'environment'},
-    {fps:10, qrbox:{width:220, height:220}},
-    function(decodedText){
+  try {
+    _qrScanner = new Html5Qrcode('qr-reader');
+    _qrScanner.start(
+      {facingMode:'environment'},
+      {fps:10, qrbox:{width:220, height:220}},
+      function(decodedText){
+        stopQRScanner();
+        // Accept any digits - full QR or just numbers
+        var nums = decodedText.replace(/\D/g,'');
+        if(nums.length >= 3){
+          var busNum = nums.length >= 5 ? nums.slice(-5) : nums.padStart(5,'0');
+          document.getElementById('busNum').value = busNum;
+          validateBus(document.getElementById('busNum'));
+          updatePreview();
+          showToast('✅ Bus ' + busNum + ' scanné!');
+        } else {
+          // Try raw text if no digits
+          document.getElementById('busNum').value = decodedText.trim();
+          validateBus(document.getElementById('busNum'));
+          updatePreview();
+          showToast('✅ Code scanné: ' + decodedText.trim());
+        }
+      },
+      function(err){ /* ignore scan errors */ }
+    ).catch(function(err){
+      showToast('❌ ' + (err.message || 'Caméra non accessible'));
       stopQRScanner();
-      var nums = decodedText.replace(/\D/g,'');
-      if(nums.length >= 4){
-        var busNum = nums.slice(-5).padStart(5,'0');
-        document.getElementById('busNum').value = busNum;
-        validateBus(document.getElementById('busNum'));
-        updatePreview();
-        showToast('✅ Bus ' + busNum + ' scanné!');
-      } else {
-        showToast('⚠️ QR invalide');
-      }
-    },
-    function(err){}
-  ).catch(function(err){
-    showToast('❌ Caméra non accessible');
+    });
+  } catch(e){
+    showToast('❌ Erreur scanner: ' + e.message);
     stopQRScanner();
-  });
+  }
 }
 
 function stopQRScanner(){
