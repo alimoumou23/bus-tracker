@@ -769,6 +769,8 @@ async function doLogin(){
 
 function loginSuccess(){
   loadTheme();
+  // Save session
+  localStorage.setItem('session', JSON.stringify(_currentUser));
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
@@ -776,6 +778,13 @@ function loginSuccess(){
   var role = _currentUser.role;
   var icon = role==='admin' ? '👑' : role==='chef' ? '⭐' : '👷';
   document.getElementById('userLabel').textContent = icon+' '+_currentUser.name;
+  document.getElementById('userLabel').onclick = function(){
+    if(confirm('Se déconnecter ?')){
+      localStorage.removeItem('session');
+      location.reload();
+    }
+  };
+  document.getElementById('userLabel').style.cursor = 'pointer';
 
   if(role === 'equipe'){
     // Poseur: hide all admin tabs
