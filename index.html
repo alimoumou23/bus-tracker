@@ -707,7 +707,7 @@ const USERS = {
 };
 let _currentUser = null;
 
-async async function doLogin(){
+async function doLogin(){
   const code = document.getElementById('loginPass').value.trim();
   const err = document.getElementById('loginErr');
   if(!code){ err.style.display='block'; err.textContent='❌ Entrez votre code'; return; }
