@@ -567,6 +567,10 @@ body.lang-ar .lbl { letter-spacing: 0; }
       <button class="filter-btn" onclick="setHistFilter('action','DEPOSE',this)">🗑️ DEPOSE</button>
       <button class="filter-btn" onclick="setHistFilter('action','FILM',this)">🛡️ FILM</button>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input type="number" id="busSearchInput" placeholder="🔍 N° Bus..." oninput="renderHistory()" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:Montserrat,sans-serif;font-size:14px;font-weight:700;outline:none;"/>
+      <button onclick="document.getElementById('busSearchInput').value='';renderHistory()" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--muted);cursor:pointer;font-size:14px;">✕</button>
+    </div>
     <div class="hist-filters" id="poseurFilters"></div>
     <div class="hist-summary" id="histSummary"></div>
     <div id="histList"><div class="loader"><div class="sync-dot"></div>&nbsp;Chargement...</div></div>
@@ -724,13 +728,10 @@ async function doLogin(){
   }
 
   // Check local poseur codes (always works offline too)
-  // Chef codes - can select any poseur name
-  var chefCodes = { '1005':'Azize' };
   var localCodes = {
     '1001':'Yassin','1002':'Hamza','1003':'Othmane','1004':'Chouaib',
     '1005':'Azize','1006':'Rachid','1007':'Adil','1008':'Hamid','1009':'Azlag'
   };
-  // Chef role: Azize
   var chefCodes = { '1005': 'Azize' };
 
   // Merge with any Firebase-updated codes
