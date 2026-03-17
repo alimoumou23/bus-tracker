@@ -85,6 +85,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .login-err{color:#e53935;font-size:12px;text-align:center;margin-top:10px;letter-spacing:1px;display:none;}
 
 /* ── APP ── */
+.header.hidden{transform:translateY(-100%);}
+.tabs.hidden{transform:translateY(100%);}
 .header{
   background:var(--yellow);border-bottom:3px solid var(--gray);
   padding:12px 16px;display:flex;align-items:center;
@@ -1967,6 +1969,29 @@ async function saveQuickEdit(id){
 
 
 
+
+
+// ══ HIDE HEADER + TABS ON SCROLL ══
+(function(){
+  var lastY = 0;
+  var header = null;
+  var tabs = null;
+  window.addEventListener('scroll', function(){
+    if(!header) header = document.querySelector('.header');
+    if(!tabs) tabs = document.querySelector('.tabs');
+    var y = window.pageYOffset || document.documentElement.scrollTop;
+    if(y > window.innerHeight){
+      // Scrolled more than 1 full page → hide
+      if(header) header.classList.add('hidden');
+      if(tabs) tabs.classList.add('hidden');
+    } else {
+      // Less than 1 page → show
+      if(header) header.classList.remove('hidden');
+      if(tabs) tabs.classList.remove('hidden');
+    }
+    lastY = y;
+  }, {passive:true});
+})();
 
 // ══ LANG ══
 var _lang = 'fr';
