@@ -2107,9 +2107,23 @@ function showTab(tab, el){
   el.classList.add('active');
   closeAllDropdowns();
   if(tab==='history'){ _histFilter.date=getTodayStr(); updateDateDisplay(); renderHistory(); }
-  if(tab==='gestion') renderGestion();
+  if(tab==='gestion'){
+    if(!_records.length){
+      db.collection('records').orderBy('timestamp','desc').get().then(function(snap){
+        _records = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        renderGestion();
+      });
+    } else { renderGestion(); }
+  }
   if(tab==='dashboard') renderDashboard();
-  if(tab==='export') renderStats();
+  if(tab==='export'){
+    if(!_records.length){
+      db.collection('records').orderBy('timestamp','desc').get().then(function(snap){
+        _records = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+        renderStats();
+      });
+    } else { renderStats(); }
+  }
   if(tab==='settings') renderSettings();
 }
 
