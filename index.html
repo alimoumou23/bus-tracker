@@ -781,7 +781,7 @@ function loginSuccess(){
   document.getElementById('userLabel').textContent = icon+' '+_currentUser.name;
   document.getElementById('userLabel').onclick = function(){
     if(confirm('Se déconnecter ?')){
-      localStorage.removeItem('session');
+      localStorage.removeItem('bustrack_session');
       location.reload();
     }
   };
@@ -1827,7 +1827,7 @@ function generateExcel(records, filename){
     }
 
     // Freeze header row
-    ws['!freeze'] = {xSplit:0, ySplit:1};
+    ws['!views'] = [{state:"frozen", xSplit:0, ySplit:1}];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Rapport CasaBus');
 
@@ -1924,7 +1924,7 @@ function openQuickEdit(id){
 
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
       '<button id="qe-save-btn" data-id="'+id+'" style="padding:12px;background:var(--yellow);color:var(--gray);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;">💾 SAUVER</button>' +
-      '<button onclick="closeEditModal()" style="padding:12px;background:var(--surface2);color:var(--text);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">✕ Annuler</button>' +
+      '<button id="qe-cancel-btn" style="padding:12px;background:var(--surface2);color:var(--text);border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:600;font-size:13px;cursor:pointer;">✕ Annuler</button>' +
     '</div>';
 
   modal.appendChild(box);
@@ -2433,6 +2433,8 @@ async function doCapture(){
     
     document.getElementById('progressFill').style.width='80%';
 
+    var loc = await getGPS();
+
     // Save to Firestore
     await db.collection('records').add({
       bus:pad(document.getElementById('busNum').value.trim()),
@@ -2440,6 +2442,7 @@ async function doCapture(){
       depot:_sdValues.depot,poseur:_sdValues.poseur,
       fileName:fn,photoURL:photoURL,storagePath:'',
       driveUrl: driveUrl,
+      location: loc,
       date:getDate(),time:new Date().toLocaleTimeString('fr-FR'),timestamp:Date.now()
     });
 
@@ -2483,7 +2486,7 @@ function toThumb(file){
 }
 function resetCapture(){
   document.getElementById('busNum').value='';
-  _sdValues={campagne:'',depot:'',poseur:''};
+  _sdValues={campagne:'',depot:'',poseur:_sdValues.poseur}; // KEEP POSEUR
   _state.file=null; _state.fileURL=null; _state.action='POSE';
   document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.act-btn.pose').classList.add('active');
