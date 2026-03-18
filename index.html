@@ -1760,7 +1760,7 @@ function buildExcelData(records){
     var driveLink = r.driveUrl || '';
     if(!driveLink.includes('/file/d/') && !driveLink.includes('/thumbnail')) driveLink = '';
     var searchLink = (!driveLink && r.fileName)
-      ? 'https://drive.google.com/drive/search?q=' + encodeURIComponent(r.fileName) : '';
+      ? 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho' : '';
     var linkVal = driveLink
       ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}}
       : searchLink ? {t:'s', v:'🔍 '+r.fileName, l:{Target: searchLink}} : '—';
