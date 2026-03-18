@@ -1681,19 +1681,23 @@ function generateExcelHTML(records, filename){
     records.forEach(function(r){
       var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
       if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+      var searchLink = (!driveLink && r.fileName)
+        ? 'https://drive.google.com/drive/search?q=' + encodeURIComponent(r.fileName) : '';
 
       var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
       var imgCell = '';
 
       if(hasBase64){
-        // Embedded image from base64
         imgCell = '<td style="text-align:center;vertical-align:middle;padding:2px;">'
           + '<img src="'+r.photoURL+'" width="80" height="80" style="object-fit:cover;"/>'
           + '</td>';
       } else if(driveLink){
-        // Link only
         imgCell = '<td style="text-align:center;vertical-align:middle;">'
           + '<a href="'+driveLink+'">📸 Voir</a>'
+          + '</td>';
+      } else if(searchLink){
+        imgCell = '<td style="text-align:center;vertical-align:middle;">'
+          + '<a href="'+searchLink+'">🔍 Chercher</a>'
           + '</td>';
       } else {
         imgCell = '<td style="text-align:center;color:#999;">—</td>';
@@ -1701,7 +1705,9 @@ function generateExcelHTML(records, filename){
 
       var linkCell = driveLink
         ? '<td><a href="'+driveLink+'">'+driveLink+'</a></td>'
-        : '<td>—</td>';
+        : searchLink
+          ? '<td><a href="'+searchLink+'">🔍 '+r.fileName+'</a></td>'
+          : '<td>—</td>';
 
       var acColor = r.action==='POSE'?'#e8f5e9':r.action==='DEPOSE'?'#fff3e0':'#e3f2fd';
 
@@ -1758,12 +1764,19 @@ function buildExcelData(records){
 
   records.forEach(function(r){
     var driveLink = r.driveUrl || r.photoURL || '';
-    // If photoURL is a Drive URL keep it, if base64 ignore it
     if(driveLink.startsWith('data:')) driveLink = '';
+    if(driveLink && !driveLink.includes('/file/d/')) driveLink = '';
+    var searchLink = (!driveLink && r.fileName)
+      ? 'https://drive.google.com/drive/search?q=' + encodeURIComponent(r.fileName) : '';
+    var linkVal = driveLink
+      ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}}
+      : searchLink
+        ? {t:'s', v:'🔍 '+r.fileName, l:{Target: searchLink}}
+        : '—';
     wsData.push([
       r.bus, r.action, r.campagne||'', r.depot||'',
       r.poseur||'', r.fileName||'', r.date||'', r.time||'',
-      driveLink ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}} : '—'
+      linkVal
     ]);
   });
   return wsData;
@@ -2422,7 +2435,7 @@ async function doCapture(){
         // Build folder link for current day
         var dateStr = getDate();
         var month = dateStr.substring(6,10)+'-'+dateStr.substring(3,5);
-        driveUrl = 'https://drive.google.com/drive/folders/1KTdLmwIRuvCAAt2ARzUUqNMc0QoKY5ho';
+        driveUrl = 'https://drive.google.com/drive/search?q=' + encodeURIComponent(fn);
         console.log('Drive result:', JSON.stringify(result), 'raw:', txt.substring(0,200));
       }
       
