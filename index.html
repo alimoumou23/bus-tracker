@@ -1682,7 +1682,7 @@ function generateExcelHTML(records, filename){
       var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
       if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
 
-      var hasBase64 = r.photoURL && r.photoURL.startsWith('data:');
+      var hasBase64 = r.photoURL && (r.photoURL.startsWith('data:') || r.photoURL.includes('drive.google.com/thumbnail'));
       var imgCell = '';
 
       if(hasBase64){
@@ -1757,13 +1757,17 @@ function buildExcelData(records){
   ];
 
   records.forEach(function(r){
-    var driveLink = r.driveUrl || r.photoURL || '';
-    // If photoURL is a Drive URL keep it, if base64 ignore it
-    if(driveLink.startsWith('data:')) driveLink = '';
+    var driveLink = r.driveUrl || '';
+    if(!driveLink.includes('/file/d/') && !driveLink.includes('/thumbnail')) driveLink = '';
+    var searchLink = (!driveLink && r.fileName)
+      ? 'https://drive.google.com/drive/search?q=' + encodeURIComponent(r.fileName) : '';
+    var linkVal = driveLink
+      ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}}
+      : searchLink ? {t:'s', v:'🔍 '+r.fileName, l:{Target: searchLink}} : '—';
     wsData.push([
       r.bus, r.action, r.campagne||'', r.depot||'',
       r.poseur||'', r.fileName||'', r.date||'', r.time||'',
-      driveLink ? {t:'s', v:'📸 Voir photo', l:{Target: driveLink}} : '—'
+      linkVal
     ]);
   });
   return wsData;
@@ -2411,6 +2415,7 @@ async function doCapture(){
       
       if(result && result.success && result.fileId){
         driveUrl = 'https://drive.google.com/file/d/'+result.fileId+'/view';
+        photoURL = 'https://drive.google.com/thumbnail?id='+result.fileId+'&sz=w300';
         showToast('✅ Photo Drive prête!');
       } else if(result && result.success && result.url){
         // Try url field if fileId missing
