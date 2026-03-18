@@ -1314,6 +1314,39 @@ function stopQRScanner(){
 }
 
 // ══ PHOTO VIEWER ══
+// ══ IMAGE ZOOM MODAL ══
+function openImgModal(photoURL, driveLink){
+  var old = document.getElementById('imgZoomModal');
+  if(old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'imgZoomModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;';
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  if(photoURL && photoURL !== 'undefined'){
+    var imgEl = document.createElement('img');
+    imgEl.src = photoURL;
+    imgEl.style.cssText = 'max-width:100%;max-height:65vh;border-radius:12px;object-fit:contain;display:block;';
+    imgEl.onerror = function(){ this.style.display='none'; };
+    modal.appendChild(imgEl);
+  }
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
+  if(driveLink && driveLink !== 'undefined' && !driveLink.includes('folders')){
+    var openBtn = document.createElement('button');
+    openBtn.textContent = '🔗 Ouvrir Drive';
+    openBtn.style.cssText = 'padding:12px 20px;background:#4285f4;color:#fff;border:none;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;';
+    openBtn.onclick = function(){ window.open(driveLink,'_blank'); };
+    btns.appendChild(openBtn);
+  }
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Fermer';
+  closeBtn.style.cssText = 'padding:12px 20px;background:#1e1e1e;color:#f0f0f0;border:1px solid #333;border-radius:10px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;cursor:pointer;';
+  closeBtn.onclick = function(){ modal.remove(); };
+  btns.appendChild(closeBtn);
+  modal.appendChild(btns);
+  document.body.appendChild(modal);
+}
+
 function openPhotoViewer(src, fullUrl){
   // If we have a Drive link, open it directly (no memory crash)
   if(fullUrl && fullUrl.includes('drive.google.com/file')){
@@ -1447,9 +1480,8 @@ function busLookup(){
     html += '<div style="font-size:13px;font-weight:700;color:#FDDD00;margin-bottom:4px;">👷 '+(r.poseur||'—')+'</div>';
     html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">📅 '+r.date+' · '+r.time+'</div>';
     html += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.campagne+(r.depot?' · '+r.depot:'')+'</div>';
-    var anyDriveLink = driveLink || driveFolderLink;
-    if(anyDriveLink){
-      html += '<a href="'+anyDriveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:6px;color:#4285f4;font-size:11px;font-weight:600;text-decoration:none;">🔗 Drive</a>';
+    if(driveLink){
+      html += '<a href="'+driveLink+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:6px;color:#4285f4;font-size:11px;font-weight:600;text-decoration:none;">🔗 Photo</a>';
     }
     html += '</div>';
 
@@ -2607,7 +2639,7 @@ function renderHistory(){
     var canEdit = true; // all roles can edit
     return `
     <div class="hist-item">
-      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="cursor:${driveLink?'pointer':'default'}" onclick="${driveLink?`window.open('${driveLink}','_blank')`:''}"/>
+      <img class="hist-thumb" src="${r.photoURL||''}" onerror="this.style.display='none'" style="cursor:${driveLink?'pointer':'default'}" onclick="openImgModal('${r.photoURL||''}','${driveLink||driveFolderLink||''}')"/>
       <div class="hist-info">
         <div class="hist-top">
           <span class="hist-badge ${r.action.toLowerCase()}">${r.action}</span>
