@@ -1674,41 +1674,69 @@ function exportExcelFilteredWithImages(){
   generateExcelHTML(records, 'rapport_'+from+'_au_'+to+'_photos');
 }
 
-function generateExcelHTML(records, filename){
+async function generateExcelHTML(records, filename){
   try {
-    var tableRows = '';
+    showToast('⏳ Chargement images...');
 
-    records.forEach(function(r){
-      var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
-      if(!driveLink && r.photoURL && r.photoURL.includes('/file/d/')) driveLink = r.photoURL;
+    // Helper: fetch any image URL and return base64 data URL
+    async function toBase64URL(src){
+      try {
+        var resp = await fetch(src, {mode:'cors'});
+        if(!resp.ok) return null;
+        var blob = await resp.blob();
+        return await new Promise(function(res){
+          var r = new FileReader();
+          r.onload = function(){ res(r.result); };
+          r.readAsDataURL(blob);
+        });
+      } catch(e){ return null; }
+    }
 
-      var hasBase64 = r.photoURL && (r.photoURL.startsWith('data:') || r.photoURL.includes('drive.google.com/thumbnail'));
-      var imgCell = '';
-
-      if(hasBase64){
-        // Embedded image from base64
-        imgCell = '<td style="text-align:center;vertical-align:middle;padding:2px;">'
-          + '<img src="'+r.photoURL+'" width="80" height="80" style="object-fit:cover;"/>'
-          + '</td>';
-      } else if(driveLink){
-        // Link only
-        imgCell = '<td style="text-align:center;vertical-align:middle;">'
-          + '<a href="'+driveLink+'">📸 Voir</a>'
-          + '</td>';
-      } else {
-        imgCell = '<td style="text-align:center;color:#999;">—</td>';
+    // Helper: get best image src for a record
+    async function getImgSrc(r){
+      // Already base64 local thumbnail
+      if(r.photoURL && r.photoURL.startsWith('data:')) return r.photoURL;
+      // Drive thumbnail URL saved by new version
+      if(r.photoURL && r.photoURL.includes('drive.google.com/thumbnail')){
+        var b64 = await toBase64URL(r.photoURL);
+        if(b64) return b64;
       }
+      // Extract fileId from driveUrl and try thumbnail
+      var fileId = null;
+      var src = r.driveUrl || '';
+      var dIdx = src.indexOf('/d/');
+      if(dIdx > -1){ var tmp = src.slice(dIdx+3).split('/')[0].split('?')[0]; if(tmp.length > 9) fileId = tmp; }
+      if(fileId){
+        var thumbUrl = 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w200';
+        var b64 = await toBase64URL(thumbUrl);
+        if(b64) return b64;
+      }
+      return null;
+    }
+
+    // Fetch all images in parallel
+    var imgSrcs = await Promise.all(records.map(getImgSrc));
+
+    var tableRows = '';
+    records.forEach(function(r, i){
+      var driveLink = (r.driveUrl && r.driveUrl.includes('/file/d/')) ? r.driveUrl : '';
+      var imgSrc = imgSrcs[i];
+      var acColor = r.action==='POSE'?'#e8f5e9':r.action==='DEPOSE'?'#fff3e0':'#e3f2fd';
+
+      var imgCell = imgSrc
+        ? '<td style="text-align:center;vertical-align:middle;padding:2px;"><img src="'+imgSrc+'" width="80" height="80" style="object-fit:cover;"/></td>'
+        : driveLink
+          ? '<td style="text-align:center;vertical-align:middle;"><a href="'+driveLink+'">📸 Voir</a></td>'
+          : '<td style="text-align:center;color:#999;">—</td>';
 
       var linkCell = driveLink
         ? '<td><a href="'+driveLink+'">'+driveLink+'</a></td>'
-        : '<td>—</td>';
-
-      var acColor = r.action==='POSE'?'#e8f5e9':r.action==='DEPOSE'?'#fff3e0':'#e3f2fd';
+        : '<td style="color:#aaa;">—</td>';
 
       tableRows += '<tr style="background:'+acColor+';">'
         + '<td style="font-weight:bold;text-align:center;">'+r.bus+'</td>'
         + '<td style="font-weight:bold;text-align:center;">'+r.action+'</td>'
-        + '<td>'+( r.campagne||'')+'</td>'
+        + '<td>'+(r.campagne||'')+'</td>'
         + '<td>'+(r.depot||'')+'</td>'
         + '<td>'+(r.poseur||'')+'</td>'
         + '<td>'+(r.date||'')+'</td>'
@@ -1718,7 +1746,7 @@ function generateExcelHTML(records, filename){
         + '</tr>';
     });
 
-    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+    var xhtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
       + 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
       + 'xmlns="http://www.w3.org/TR/REC-html40">'
       + '<head><meta charset="UTF-8">'
@@ -1728,22 +1756,20 @@ function generateExcelHTML(records, filename){
       + '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
       + '<style>td,th{border:1px solid #ccc;padding:6px 10px;font-family:Arial,sans-serif;font-size:12px;}'
       + 'th{background:#53575A;color:#FDDD00;font-weight:bold;text-align:center;}'
-      + 'table{border-collapse:collapse;}</style></head><body>'
+      + 'table{border-collapse:collapse;}tr{height:90px;}</style></head><body>'
       + '<table>'
-      + '<tr>'
-      + '<th>N° Bus</th><th>Action</th><th>Campagne</th><th>Dépôt</th>'
-      + '<th>Poseur</th><th>Date</th><th>Heure</th>'
-      + '<th>Photo</th><th>Lien Drive</th>'
-      + '</tr>'
+      + '<tr><th>N° Bus</th><th>Action</th><th>Campagne</th><th>Dépôt</th>'
+      + '<th>Poseur</th><th>Date</th><th>Heure</th><th>Photo</th><th>Lien Drive</th></tr>'
       + tableRows
       + '</table></body></html>';
 
-    var blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+    var blob = new Blob([xhtml], {type:'application/vnd.ms-excel;charset=utf-8'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = filename+'.xls';
     a.click();
-    showToast('✅ Excel avec photos téléchargé!');
+    var nImgs = imgSrcs.filter(Boolean).length;
+    showToast('✅ Excel téléchargé! ('+nImgs+'/'+records.length+' photos)');
   } catch(e){
     showToast('❌ Erreur: '+e.message);
   }
